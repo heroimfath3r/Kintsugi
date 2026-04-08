@@ -27,87 +27,95 @@ class WelcomeScreen extends StatelessWidget {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: AppColors.backgroundPrimary,
-      body: SafeArea(
-        child: Column(
-          children: [
-            // Hero image zone
-            Expanded(
-              flex: 5,
-              child: Container(
-                width: double.infinity,
-                color: AppColors.backgroundSecondary,
-                // TODO: replace with Image.asset('assets/images/warrior_hero.png', fit: BoxFit.cover)
-                child: const Center(
-                  child: Icon(
-                    Icons.person_outline,
-                    size: 80,
-                    color: AppColors.textHint,
-                  ),
+      body: Stack(
+        children: [
+          // Background image full screen
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/welcome_bg.png',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Gradient overlay: transparent top 40% → solid bottom
+          Positioned.fill(
+            child: DecoratedBox(
+              decoration: const BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  stops: [0.4, 1.0],
+                  colors: [
+                    Colors.transparent,
+                    Color(0xFF0D0D0D),
+                  ],
                 ),
               ),
             ),
-            // Title, tagline and buttons
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
-              child: Column(
-                children: [
-                  const Text(
-                    'KINTSUGI',
-                    style: TextStyle(
-                      fontFamily: 'Cinzel',
-                      fontSize: 40,
-                      fontWeight: FontWeight.w700,
-                      color: AppColors.accentPrimary,
-                      letterSpacing: 6,
+          ),
+          // Content at the bottom
+          SafeArea(
+            child: Align(
+              alignment: Alignment.bottomCenter,
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const Text(
+                      'KINTSUGI',
+                      style: TextStyle(
+                        fontFamily: 'Cinzel',
+                        fontSize: 40,
+                        fontWeight: FontWeight.w700,
+                        color: AppColors.accentPrimary,
+                        letterSpacing: 6,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Tu camino. Tu historia. Tu progreso.',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w400,
-                      color: AppColors.textSecondary,
-                      letterSpacing: 0.5,
+                    const SizedBox(height: 8),
+                    const Text(
+                      'Tu camino. Tu historia. Tu progreso.',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w400,
+                        color: AppColors.textSecondary,
+                        letterSpacing: 0.5,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 40),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: ElevatedButton(
-                      onPressed: () {
-                        // TODO: navigate to register
-                      },
-                      child: const Text('COMENZAR VIAJE'),
+                    const SizedBox(height: 40),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: ElevatedButton(
+                        onPressed: () {
+                          // TODO: navigate to register
+                        },
+                        child: const Text('COMENZAR VIAJE'),
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 12),
-                  SizedBox(
-                    width: double.infinity,
-                    height: 52,
-                    child: OutlinedButton(
-                      onPressed: () {
-                        // TODO: navigate to login
-                      },
-                      child: const Text('YA TENGO CUENTA'),
+                    const SizedBox(height: 12),
+                    SizedBox(
+                      width: double.infinity,
+                      height: 52,
+                      child: OutlinedButton(
+                        onPressed: () {
+                          // TODO: navigate to login
+                        },
+                        child: const Text('YA TENGO CUENTA'),
+                      ),
                     ),
-                  ),
-                ],
+                    const SizedBox(height: 24),
+                    Text(
+                      'Al continuar aceptas nuestros Términos y Privacidad',
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.labelSmall,
+                    ),
+                  ],
+                ),
               ),
             ),
-            // Legal text
-            Padding(
-              padding: const EdgeInsets.only(bottom: 24, left: 24, right: 24),
-              child: Text(
-                'Al continuar aceptas nuestros Términos y Privacidad',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.labelSmall,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:kintsugi_app/core/theme/app_colors.dart';
 import 'package:kintsugi_app/core/theme/app_theme.dart';
+import 'package:kintsugi_app/presentation/screens/auth/auth_screen.dart';
 
 void main() {
   runApp(const KintsugiApp());
@@ -88,7 +89,11 @@ class WelcomeScreen extends StatelessWidget {
                       height: 52,
                       child: ElevatedButton(
                         onPressed: () {
-                          // TODO: navigate to register
+                          Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const AuthScreen(
+                              initialMode: AuthMode.register,
+                            ),
+                          ));
                         },
                         child: const Text('COMENZAR VIAJE'),
                       ),
@@ -99,7 +104,11 @@ class WelcomeScreen extends StatelessWidget {
                       height: 52,
                       child: OutlinedButton(
                         onPressed: () {
-                          // TODO: navigate to login
+                          Navigator.of(context).push(MaterialPageRoute(
+                            builder: (_) => const AuthScreen(
+                              initialMode: AuthMode.login,
+                            ),
+                          ));
                         },
                         child: const Text('YA TENGO CUENTA'),
                       ),

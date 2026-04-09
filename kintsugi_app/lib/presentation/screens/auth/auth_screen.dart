@@ -1,6 +1,7 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:kintsugi_app/core/theme/app_colors.dart';
+import 'package:kintsugi_app/presentation/screens/auth/test_sintonia_screen.dart';
 
 enum AuthMode { register, login }
 
@@ -89,7 +90,13 @@ class _AuthScreenState extends State<AuthScreen> {
       }
     });
     if (_isFormValid) {
-      // TODO: dispatch AuthBloc event
+      if (_mode == AuthMode.register) {
+        Navigator.of(context).pushReplacement(
+          MaterialPageRoute(builder: (_) => const TestSintoniaScreen()),
+        );
+      } else {
+        // TODO: dispatch LoginEvent → navigate to home or test_sintonia depending on onboarding state
+      }
     }
   }
 

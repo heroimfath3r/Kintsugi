@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kintsugi_app/core/theme/app_colors.dart';
+import 'package:kintsugi_app/presentation/screens/auth/resultado_arquetipo_screen.dart';
 
 // ── Data model ─────────────────────────────────────────────────────────────────
 
@@ -374,33 +375,6 @@ class _OpcionCard extends StatelessWidget {
                       size: 20),
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Placeholder para ResultadoArquetipoScreen ──────────────────────────────────
-// Se reemplaza cuando se crea la pantalla real.
-
-class ResultadoArquetipoScreen extends StatelessWidget {
-  final Map<String, int> puntos;
-
-  const ResultadoArquetipoScreen({super.key, required this.puntos});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundPrimary,
-      body: Center(
-        child: Text(
-          'Resultado próximamente\n$puntos',
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14,
-            color: AppColors.textSecondary,
-          ),
         ),
       ),
     );

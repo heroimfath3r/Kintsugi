@@ -95,7 +95,27 @@ class _AuthScreenState extends State<AuthScreen> {
           MaterialPageRoute(builder: (_) => const TestSintoniaScreen()),
         );
       } else {
-        // TODO: dispatch LoginEvent → navigate to home or test_sintonia depending on onboarding state
+        // TODO: TEMPORAL - eliminar antes de conectar Firebase
+        // Navega directo al home sin validar credenciales
+        // Reemplazar con AuthBloc.add(LoginRequested(...))
+        Navigator.of(context).pushAndRemoveUntil(
+          MaterialPageRoute(
+            builder: (_) => const Scaffold(
+              backgroundColor: Color(0xFF0D0D0D),
+              body: Center(
+                child: Text(
+                  'Home — próximamente',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    color: Color(0xFF9E9E9E),
+                  ),
+                ),
+              ),
+            ),
+          ),
+          (_) => false,
+        );
       }
     }
   }

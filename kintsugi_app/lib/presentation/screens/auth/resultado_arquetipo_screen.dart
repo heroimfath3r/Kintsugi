@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:kintsugi_app/core/theme/app_colors.dart';
+import 'package:kintsugi_app/presentation/screens/home/home_screen.dart';
 
 // ── Datos por arquetipo ────────────────────────────────────────────────────────
 
@@ -353,9 +354,12 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
         height: 56,
         child: ElevatedButton(
           onPressed: () {
-            // TODO: guardar arquetipo en Firestore + Hive, navegar al Home
+            // TODO: guardar arquetipo en Firestore + Hive antes de navegar
             Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(builder: (_) => const _Homeplaceholder()),
+              MaterialPageRoute(
+                builder: (_) =>
+                    HomeScreen(arquetipoId: _arquetipoSeleccionado),
+              ),
               (_) => false,
             );
           },
@@ -535,25 +539,3 @@ class _SelectorArquetiposSheet extends StatelessWidget {
   }
 }
 
-// ── Home placeholder ───────────────────────────────────────────────────────────
-
-class _Homeplaceholder extends StatelessWidget {
-  const _Homeplaceholder();
-
-  @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: AppColors.backgroundPrimary,
-      body: Center(
-        child: Text(
-          'Home — próximamente',
-          style: TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 14,
-            color: AppColors.textSecondary,
-          ),
-        ),
-      ),
-    );
-  }
-}

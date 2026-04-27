@@ -1,9 +1,15 @@
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:kintsugi_app/core/theme/app_colors.dart';
 import 'package:kintsugi_app/core/theme/app_theme.dart';
+import 'package:kintsugi_app/firebase_options.dart';
 import 'package:kintsugi_app/presentation/screens/auth/auth_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(const KintsugiApp());
 }
 
@@ -30,14 +36,12 @@ class WelcomeScreen extends StatelessWidget {
       backgroundColor: AppColors.backgroundPrimary,
       body: Stack(
         children: [
-          // Background image full screen
           Positioned.fill(
             child: Image.asset(
               'assets/images/welcome_bg.png',
               fit: BoxFit.cover,
             ),
           ),
-          // Gradient overlay: transparent top 40% → solid bottom
           Positioned.fill(
             child: DecoratedBox(
               decoration: const BoxDecoration(
@@ -53,7 +57,6 @@ class WelcomeScreen extends StatelessWidget {
               ),
             ),
           ),
-          // Content at the bottom
           SafeArea(
             child: Align(
               alignment: Alignment.bottomCenter,
@@ -80,44 +83,23 @@ class WelcomeScreen extends StatelessWidget {
                         fontSize: 14,
                         fontWeight: FontWeight.w400,
                         color: AppColors.textSecondary,
-                        letterSpacing: 0.5,
+                        letterSpacing: 1.5,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(height: 40),
+                    const SizedBox(height: 48),
                     SizedBox(
                       width: double.infinity,
-                      height: 52,
                       child: ElevatedButton(
                         onPressed: () {
-                          Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const AuthScreen(
-                              initialMode: AuthMode.register,
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (_) => const AuthScreen(),
                             ),
-                          ));
+                          );
                         },
-                        child: const Text('COMENZAR VIAJE'),
+                        child: const Text('Comenzar'),
                       ),
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      width: double.infinity,
-                      height: 52,
-                      child: OutlinedButton(
-                        onPressed: () {
-                          Navigator.of(context).push(MaterialPageRoute(
-                            builder: (_) => const AuthScreen(
-                              initialMode: AuthMode.login,
-                            ),
-                          ));
-                        },
-                        child: const Text('YA TENGO CUENTA'),
-                      ),
-                    ),
-                    const SizedBox(height: 24),
-                    Text(
-                      'Al continuar aceptas nuestros Términos y Privacidad',
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.labelSmall,
                     ),
                   ],
                 ),

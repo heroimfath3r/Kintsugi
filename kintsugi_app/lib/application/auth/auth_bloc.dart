@@ -4,6 +4,9 @@
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../../core/network/api_exceptions.dart';
+import '../../core/di/service_locator.dart';
+import '../../core/sync/sync_manager.dart';
+import '../../data/local/local_storage_service.dart';
 import '../../data/services/auth_service.dart';
 import 'auth_event.dart';
 import 'auth_state.dart';
@@ -23,7 +26,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     on<AuthRegisterRequested>(_onRegister);
     on<AuthLogoutRequested>(_onLogout);
     on<AuthSetArchetype>(_onSetArchetype);
-    // ── Nuevos handlers ──
     on<AuthForgotPasswordRequested>(_onForgotPassword);
     on<AuthSendEmailVerification>(_onSendEmailVerification);
     on<AuthCheckEmailVerified>(_onCheckEmailVerified);
@@ -31,11 +33,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   // ── Helpers privados ──────────────────────────────────────────────────
 
-  /// Lee emailVerified del usuario actual de Firebase.
   bool get _isEmailVerified =>
       _firebaseAuth.currentUser?.emailVerified ?? false;
 
-  // ── Handlers existentes (modificados para pasar emailVerified) ────────
+  // ── Handlers ──────────────────────────────────────────────────────────
 
   Future<void> _onCheckSession(
       AuthCheckSession event, Emitter<AuthState> emit) async {
@@ -46,7 +47,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       return;
     }
     try {
-      // Reload para tener el emailVerified más reciente
       await currentUser.reload();
       final profile = await _authService.getProfile();
       emit(AuthAuthenticated(
@@ -69,6 +69,10 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
         email: event.email.trim(),
         password: event.password,
       );
+
+      // Intentar sincronizar datos pendientes al iniciar sesión
+      sl<SyncManager>().syncPendientes();
+
       final profile = await _authService.getProfile();
       emit(AuthAuthenticated(
         user: profile,
@@ -87,19 +91,12 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
       AuthRegisterRequested event, Emitter<AuthState> emit) async {
     emit(const AuthLoading());
     try {
-      // 1. Crear cuenta en Firebase Auth
       await _firebaseAuth.createUserWithEmailAndPassword(
         email: event.email.trim(),
         password: event.password,
       );
-
-      // 2. Enviar email de verificación automáticamente
       await _firebaseAuth.currentUser?.sendEmailVerification();
-
-      // 3. Registrar en el backend (API REST)
       final profile = await _authService.register();
-
-      // 4. emailVerified será false porque acaba de crear la cuenta
       emit(AuthAuthenticated(
         user: profile,
         emailVerified: false,
@@ -115,7 +112,18 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
 
   Future<void> _onLogout(
       AuthLogoutRequested event, Emitter<AuthState> emit) async {
+    // 1. Detener SyncManager
+    sl<SyncManager>().stopListening();
+
+    // 2. Limpiar datos locales (Hive)
+    await sl<LocalStorageService>().limpiarTodo();
+
+    // 3. Cerrar sesión en Firebase
     await _firebaseAuth.signOut();
+
+    // 4. Reiniciar SyncManager para la próxima sesión
+    sl<SyncManager>().startListening();
+
     emit(const AuthUnauthenticated());
   }
 
@@ -135,11 +143,6 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  // ── Nuevos handlers ──────────────────────────────────────────────────
-
-  /// Envía correo de recuperación de contraseña.
-  /// No necesita que el usuario esté logueado.
-  /// Firebase maneja todo: genera el link, envía el correo.
   Future<void> _onForgotPassword(
       AuthForgotPasswordRequested event, Emitter<AuthState> emit) async {
     emit(const AuthLoading());
@@ -153,43 +156,30 @@ class AuthBloc extends Bloc<AuthEvent, AuthState> {
     }
   }
 
-  /// Reenvía el correo de verificación de email.
-  /// Requiere que el usuario esté logueado (currentUser != null).
   Future<void> _onSendEmailVerification(
       AuthSendEmailVerification event, Emitter<AuthState> emit) async {
     try {
       await _firebaseAuth.currentUser?.sendEmailVerification();
     } on FirebaseAuthException catch (e) {
       emit(AuthError(message: _firebaseErrorMessage(e.code)));
-    } catch (e) {
-      // Silenciamos errores de reenvío para no romper la UX
-    }
+    } catch (_) {}
   }
 
-  /// Hace reload del usuario de Firebase y re-emite AuthAuthenticated
-  /// con el emailVerified actualizado.
-  /// Si ya está verificado → el _AuthGate lo deja pasar.
-  /// Si no → sigue en la pantalla de verificación.
   Future<void> _onCheckEmailVerified(
       AuthCheckEmailVerified event, Emitter<AuthState> emit) async {
     try {
       await _firebaseAuth.currentUser?.reload();
       if (_isEmailVerified) {
-        // Ya verificó → traer perfil y emitir con verified = true
         final profile = await _authService.getProfile();
         emit(AuthAuthenticated(
           user: profile,
           emailVerified: true,
         ));
       }
-      // Si no está verificado, no emitimos nada.
-      // La UI puede checar el resultado por su cuenta.
-    } catch (e) {
-      // No emitimos error para no romper la pantalla de verificación
-    }
+    } catch (_) {}
   }
 
-  // ── Mapeo de errores de Firebase ─────────────────────────────────────
+  // ── Mapeo de errores ─────────────────────────────────────────────────
 
   String _firebaseErrorMessage(String code) {
     switch (code) {

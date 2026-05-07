@@ -1,3 +1,4 @@
+//C:\Proyectos\Kintsugi\kintsugi_app\lib\data\models\checkin_model.dart
 class CheckinModel {
   final String estadoEmocional;
   final String fecha;

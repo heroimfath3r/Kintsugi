@@ -7,9 +7,11 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:kintsugi_app/core/di/service_locator.dart';
 import 'package:kintsugi_app/core/theme/app_colors.dart';
 import 'package:kintsugi_app/core/theme/app_theme.dart';
+import 'package:kintsugi_app/core/sync/sync_manager.dart';
 import 'package:kintsugi_app/application/auth/auth_bloc.dart';
 import 'package:kintsugi_app/application/auth/auth_event.dart';
 import 'package:kintsugi_app/application/auth/auth_state.dart';
+import 'package:kintsugi_app/data/local/hive_init.dart';
 import 'package:kintsugi_app/data/services/auth_service.dart';
 import 'package:kintsugi_app/presentation/screens/auth/auth_screen.dart';
 import 'package:kintsugi_app/presentation/screens/auth/email_verification_screen.dart';
@@ -18,8 +20,19 @@ import 'package:kintsugi_app/presentation/screens/home/home_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+
+  // 1. Inicializar Hive (almacenamiento local) ANTES que Firebase
+  await initHive();
+
+  // 2. Inicializar Firebase
   await Firebase.initializeApp();
+
+  // 3. Registrar dependencias
   setupServiceLocator();
+
+  // 4. Iniciar SyncManager (escucha cambios de conectividad)
+  sl<SyncManager>().startListening();
+
   runApp(const KintsugiApp());
 }
 

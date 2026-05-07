@@ -1,3 +1,5 @@
+// lib/presentation/screens/home/home_screen.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kintsugi_app/core/theme/app_colors.dart';
@@ -11,6 +13,13 @@ import 'package:kintsugi_app/data/models/mision_model.dart';
 import 'package:kintsugi_app/data/services/auth_service.dart';
 import 'package:kintsugi_app/data/services/checkin_service.dart';
 import 'package:kintsugi_app/data/services/mision_service.dart';
+import 'package:kintsugi_app/presentation/screens/home/widgets/home_drawer.dart';
+import 'package:kintsugi_app/presentation/screens/home/tabs/misiones_tab.dart';
+import 'package:kintsugi_app/presentation/screens/home/tabs/progreso_tab.dart';
+import 'package:kintsugi_app/presentation/screens/home/tabs/perfil_tab.dart';
+import 'package:kintsugi_app/core/network/connectivity_service.dart';
+
+// ── Constantes ──────────────────────────────────────────────────────────
 
 const Map<String, String> _nombres = {
   'thorfinn': 'THORFINN',
@@ -19,6 +28,30 @@ const Map<String, String> _nombres = {
   'ippo': 'IPPO',
   'mob': 'MOB',
   'asta': 'ASTA',
+};
+
+const Map<String, String> _animes = {
+  'thorfinn': 'Vinland Saga',
+  'rocklee': 'Naruto',
+  'rock_lee': 'Naruto',
+  'ippo': 'Hajime no Ippo',
+  'mob': 'Mob Psycho 100',
+  'asta': 'Black Clover',
+};
+
+const Map<String, String> _filosofias = {
+  'thorfinn':
+      'No necesitas una espada para tener valor. El verdadero guerrero busca la paz.',
+  'rocklee':
+      'El esfuerzo es el genio que nunca se rinde. Si no puedo hacer cien patadas, haré mil.',
+  'rock_lee':
+      'El esfuerzo es el genio que nunca se rinde. Si no puedo hacer cien patadas, haré mil.',
+  'ippo':
+      'El coraje no es la ausencia del miedo, es dar un paso a pesar de él.',
+  'mob':
+      'Sentir no es debilidad. Reprimir lo que sientes es lo que te rompe.',
+  'asta':
+      'No importa lo que digan. Si tú no te rindes, nadie puede detenerte.',
 };
 
 class _OpcionEmocional {
@@ -37,6 +70,8 @@ const _emociones = [
   _OpcionEmocional('☁️', 'Calma', 'calma'),
 ];
 
+// ── HomeScreen (entry point con BlocProvider) ───────────────────────────
+
 class HomeScreen extends StatelessWidget {
   final String arquetipoId;
 
@@ -49,11 +84,14 @@ class HomeScreen extends StatelessWidget {
         authService: sl<AuthService>(),
         checkinService: sl<CheckinService>(),
         misionService: sl<MisionService>(),
+        connectivity: sl<ConnectivityService>(),
       )..add(const HomeLoadData()),
       child: _HomeView(arquetipoId: arquetipoId),
     );
   }
 }
+
+// ── HomeView (stateful con tabs) ────────────────────────────────────────
 
 class _HomeView extends StatefulWidget {
   final String arquetipoId;
@@ -66,12 +104,20 @@ class _HomeView extends StatefulWidget {
 
 class _HomeViewState extends State<_HomeView> {
   int _tabIndex = 0;
+  final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
 
   String get _nombre =>
       _nombres[widget.arquetipoId] ?? widget.arquetipoId.toUpperCase();
 
+  String get _anime => _animes[widget.arquetipoId] ?? '';
+
+  String get _filosofia => _filosofias[widget.arquetipoId] ?? '';
+
   String get _imagenFase1 =>
       'assets/avatars/${widget.arquetipoId}_fase1.png';
+
+  String _imagenFase(int fase) =>
+      'assets/avatars/${widget.arquetipoId}_fase$fase.png';
 
   String _formatearFecha() {
     final now = DateTime.now();
@@ -85,27 +131,27 @@ class _HomeViewState extends State<_HomeView> {
 
   @override
   Widget build(BuildContext context) {
-    // ══════════════════════════════════════════════════════════════════
-    // FIX: PopScope bloquea el botón atrás de Android.
-    // El Home es la pantalla raíz — no hay a dónde volver.
-    // ══════════════════════════════════════════════════════════════════
     return PopScope(
       canPop: false,
       child: Scaffold(
+        key: _scaffoldKey,
         backgroundColor: AppColors.backgroundPrimary,
+        drawer: HomeDrawer(
+          nombre: _nombre,
+          imagenFase1: _imagenFase1,
+          currentTabIndex: _tabIndex,
+          onTabSelected: (index) => setState(() => _tabIndex = index),
+        ),
         body: Stack(
           children: [
-            _buildBackground(),
+            // Fondo solo visible en tab Inicio
+            if (_tabIndex == 0) _buildBackground(),
             SafeArea(
               bottom: false,
               child: Column(
                 children: [
                   _buildTopBar(),
-                  Expanded(
-                    child: _tabIndex == 0
-                        ? _buildHomeContent()
-                        : _buildPlaceholderTab(),
-                  ),
+                  Expanded(child: _buildCurrentTab()),
                 ],
               ),
             ),
@@ -120,6 +166,33 @@ class _HomeViewState extends State<_HomeView> {
       ),
     );
   }
+
+  /// Decide qué tab mostrar según el índice seleccionado.
+  Widget _buildCurrentTab() {
+    switch (_tabIndex) {
+      case 0:
+        return _buildHomeContent();
+      case 1:
+        return MisionesTab(arquetipoId: widget.arquetipoId);
+      case 2:
+        return ProgresoTab(
+          arquetipoId: widget.arquetipoId,
+          imagenFase: _imagenFase,
+        );
+      case 3:
+        return PerfilTab(
+          arquetipoId: widget.arquetipoId,
+          nombre: _nombre,
+          anime: _anime,
+          filosofia: _filosofia,
+          imagenFase1: _imagenFase1,
+        );
+      default:
+        return _buildHomeContent();
+    }
+  }
+
+  // ── Background ────────────────────────────────────────────────────────
 
   Widget _buildBackground() {
     return Positioned.fill(
@@ -154,6 +227,8 @@ class _HomeViewState extends State<_HomeView> {
     );
   }
 
+  // ── Top Bar ───────────────────────────────────────────────────────────
+
   Widget _buildTopBar() {
     return SizedBox(
       height: 56,
@@ -162,10 +237,12 @@ class _HomeViewState extends State<_HomeView> {
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.menu, color: AppColors.textPrimary, size: 22),
-              onPressed: () {},
+              icon: const Icon(Icons.menu,
+                  color: AppColors.textPrimary, size: 22),
+              onPressed: () => _scaffoldKey.currentState?.openDrawer(),
               padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
+              constraints:
+                  const BoxConstraints(minWidth: 36, minHeight: 36),
             ),
             const Expanded(
               child: Text(
@@ -180,12 +257,9 @@ class _HomeViewState extends State<_HomeView> {
                 ),
               ),
             ),
-            // ══════════════════════════════════════════════════════════════
-            // FIX: Botón de logout funcional para la demo
-            // ══════════════════════════════════════════════════════════════
             GestureDetector(
+              onTap: () => setState(() => _tabIndex = 3),
               onLongPress: () {
-                // Long press para cerrar sesión (útil para demo)
                 showDialog(
                   context: context,
                   builder: (ctx) => AlertDialog(
@@ -203,13 +277,16 @@ class _HomeViewState extends State<_HomeView> {
                         onPressed: () => Navigator.of(ctx).pop(),
                         child: const Text(
                           'Cancelar',
-                          style: TextStyle(color: AppColors.textSecondary),
+                          style:
+                              TextStyle(color: AppColors.textSecondary),
                         ),
                       ),
                       TextButton(
                         onPressed: () {
                           Navigator.of(ctx).pop();
-                          context.read<AuthBloc>().add(const AuthLogoutRequested());
+                          context
+                              .read<AuthBloc>()
+                              .add(const AuthLogoutRequested());
                         },
                         child: const Text(
                           'Cerrar sesión',
@@ -226,7 +303,8 @@ class _HomeViewState extends State<_HomeView> {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFF242424),
-                  border: Border.all(color: AppColors.accentPrimary, width: 1.5),
+                  border:
+                      Border.all(color: AppColors.accentPrimary, width: 1.5),
                 ),
                 child: const Icon(
                   Icons.person,
@@ -241,12 +319,15 @@ class _HomeViewState extends State<_HomeView> {
     );
   }
 
+  // ── Tab Inicio ────────────────────────────────────────────────────────
+
   Widget _buildHomeContent() {
     return BlocBuilder<HomeBloc, HomeState>(
       builder: (context, state) {
         if (state is HomeLoading || state is HomeInitial) {
           return const Center(
-            child: CircularProgressIndicator(color: AppColors.accentPrimary),
+            child:
+                CircularProgressIndicator(color: AppColors.accentPrimary),
           );
         }
 
@@ -296,7 +377,8 @@ class _HomeViewState extends State<_HomeView> {
         final screenHeight = MediaQuery.of(context).size.height;
         final statusBarHeight = MediaQuery.of(context).padding.top;
         final greetingOffset =
-            (screenHeight * 0.38 - statusBarHeight - 56).clamp(8.0, double.infinity);
+            (screenHeight * 0.38 - statusBarHeight - 56)
+                .clamp(8.0, double.infinity);
 
         return SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
@@ -314,7 +396,8 @@ class _HomeViewState extends State<_HomeView> {
                   : _buildCardCheckin(context),
               const SizedBox(height: 12),
               if (state.misionHoy != null)
-                _buildCardMision(context, state.misionHoy!, state.misionCompletada),
+                _buildCardMision(
+                    context, state.misionHoy!, state.misionCompletada),
               if (state.misionHoy == null && state.yaHizoCheckin)
                 _buildMisionCargando(),
               const SizedBox(height: 80),
@@ -697,6 +780,8 @@ class _HomeViewState extends State<_HomeView> {
     );
   }
 
+  // ── Bottom Nav Bar ────────────────────────────────────────────────────
+
   Widget _buildBottomNavBar() {
     return Container(
       decoration: const BoxDecoration(
@@ -711,7 +796,8 @@ class _HomeViewState extends State<_HomeView> {
             mainAxisAlignment: MainAxisAlignment.spaceAround,
             children: [
               _buildNavItem(0, Icons.home_rounded, 'Inicio'),
-              _buildNavItem(1, Icons.check_circle_outline_rounded, 'Misiones'),
+              _buildNavItem(
+                  1, Icons.check_circle_outline_rounded, 'Misiones'),
               _buildNavItem(2, Icons.show_chart_rounded, 'Progreso'),
               _buildNavItem(3, Icons.person_outline_rounded, 'Perfil'),
             ],
@@ -761,21 +847,6 @@ class _HomeViewState extends State<_HomeView> {
               ),
             ),
           ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildPlaceholderTab() {
-    const labels = ['Misiones', 'Progreso', 'Perfil'];
-    final label = _tabIndex > 0 ? labels[_tabIndex - 1] : '';
-    return Center(
-      child: Text(
-        '$label — próximamente',
-        style: const TextStyle(
-          fontFamily: 'Inter',
-          fontSize: 14,
-          color: AppColors.textSecondary,
         ),
       ),
     );

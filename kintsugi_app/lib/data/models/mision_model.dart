@@ -1,3 +1,4 @@
+//C:\Proyectos\Kintsugi\kintsugi_app\lib\data\models\mision_model.dart
 class MisionModel {
   final String id;
   final String titulo;

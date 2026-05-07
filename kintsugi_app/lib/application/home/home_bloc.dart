@@ -1,5 +1,7 @@
+import 'dart:async';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import '../../core/network/api_exceptions.dart';
+import '../../core/network/connectivity_service.dart';
 import '../../data/services/auth_service.dart';
 import '../../data/services/checkin_service.dart';
 import '../../data/services/mision_service.dart';
@@ -10,18 +12,38 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
   final AuthService _authService;
   final CheckinService _checkinService;
   final MisionService _misionService;
+  final ConnectivityService _connectivity;
+
+  StreamSubscription? _connectivitySubscription;
 
   HomeBloc({
     required AuthService authService,
     required CheckinService checkinService,
     required MisionService misionService,
+    required ConnectivityService connectivity,
   })  : _authService = authService,
         _checkinService = checkinService,
         _misionService = misionService,
+        _connectivity = connectivity,
         super(const HomeInitial()) {
     on<HomeLoadData>(_onLoadData);
     on<HomeCheckinRequested>(_onCheckin);
     on<HomeMisionCompleted>(_onMisionCompleted);
+
+    // Escuchar cambios de conectividad.
+    // Cuando vuelve internet → recargar datos automáticamente.
+    _connectivitySubscription =
+        _connectivity.onConnectivityChanged.listen((isOnline) {
+      if (isOnline && state is HomeLoaded) {
+        add(const HomeLoadData());
+      }
+    });
+  }
+
+  @override
+  Future<void> close() {
+    _connectivitySubscription?.cancel();
+    return super.close();
   }
 
   Future<void> _onLoadData(
@@ -29,7 +51,6 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     Emitter<HomeState> emit,
   ) async {
     emit(const HomeLoading());
-
     try {
       final user = await _authService.getProfile();
       final checkinHoy = await _checkinService.getCheckinHoy();
@@ -56,7 +77,8 @@ class HomeBloc extends Bloc<HomeEvent, HomeState> {
     if (currentState is! HomeLoaded) return;
 
     try {
-      final checkin = await _checkinService.realizarCheckin(event.estadoEmocional);
+      final checkin =
+          await _checkinService.realizarCheckin(event.estadoEmocional);
       final mision = await _tryGetMision();
       final user = await _authService.getProfile();
 

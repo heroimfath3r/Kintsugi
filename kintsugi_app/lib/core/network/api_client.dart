@@ -1,3 +1,4 @@
+//C:\Proyectos\Kintsugi\kintsugi_app\lib\core\network\api_client.dart
 import 'package:dio/dio.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'api_endpoints.dart';
@@ -26,6 +27,7 @@ class ApiClient {
             final user = FirebaseAuth.instance.currentUser;
             if (user != null) {
               final token = await user.getIdToken();
+              
               options.headers['Authorization'] = 'Bearer $token';
             }
           } catch (_) {}

@@ -1,3 +1,4 @@
+//C:\Proyectos\Kintsugi\kintsugi_app\lib\core\network\api_endpoints.dart
 class ApiEndpoints {
   ApiEndpoints._();
   static const String baseUrl = 'http://10.0.2.2:3000';

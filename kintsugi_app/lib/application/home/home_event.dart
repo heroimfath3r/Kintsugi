@@ -1,3 +1,4 @@
+//C:\Proyectos\Kintsugi\kintsugi_app\lib\application\home\home_event.dart
 import 'package:equatable/equatable.dart';
 
 abstract class HomeEvent extends Equatable {

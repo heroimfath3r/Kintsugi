@@ -1,3 +1,6 @@
+// Reemplaza TODO el contenido de:
+// lib/data/models/progreso_model.dart
+
 class ProgresoModel {
   final int xp;
   final int fase;
@@ -5,7 +8,13 @@ class ProgresoModel {
   final int misionesCompletadas;
   final int xpSiguienteFase;
 
-  const ProgresoModel({this.xp = 0, this.fase = 1, this.racha = 0, this.misionesCompletadas = 0, this.xpSiguienteFase = 100});
+  const ProgresoModel({
+    this.xp = 0,
+    this.fase = 1,
+    this.racha = 0,
+    this.misionesCompletadas = 0,
+    this.xpSiguienteFase = 100,
+  });
 
   factory ProgresoModel.fromJson(Map<String, dynamic> json) {
     int xpNext = 100;
@@ -36,22 +45,85 @@ class ProgresoModel {
   String get faseLabel => 'Fase $fase';
 }
 
+/// Modelo del resumen semanal.
+/// La API devuelve checkins y misiones como listas separadas.
+/// Este modelo las combina en una lista de 7 días (Lun-Dom)
+/// para que la UI pueda renderizar los círculos fácilmente.
 class ProgresoWeeklyModel {
   final String estadoMasFrecuente;
   final int misionesCompletadas;
   final int diasActivos;
   final List<CheckinDiaModel> dias;
 
-  const ProgresoWeeklyModel({this.estadoMasFrecuente = '', this.misionesCompletadas = 0, this.diasActivos = 0, this.dias = const []});
+  const ProgresoWeeklyModel({
+    this.estadoMasFrecuente = '',
+    this.misionesCompletadas = 0,
+    this.diasActivos = 0,
+    this.dias = const [],
+  });
 
   factory ProgresoWeeklyModel.fromJson(Map<String, dynamic> json) {
-    final diasList = (json['dias'] as List?)?.map((d) => CheckinDiaModel.fromJson(d as Map<String, dynamic>)).toList() ?? [];
+    // La API devuelve: { checkins: [...], misiones: [...], estadoFrecuente, ... }
+    final checkins = (json['checkins'] as List?) ?? [];
+    final misiones = (json['misiones'] as List?) ?? [];
+
+    // Construir mapa de misiones completadas por fecha (YYYY-MM-DD)
+    final misionesMap = <String, bool>{};
+    for (final m in misiones) {
+      if (m is Map<String, dynamic>) {
+        final fecha = _extraerFecha(m['fecha']?.toString() ?? '');
+        misionesMap[fecha] = m['completada'] == true;
+      }
+    }
+
+    // Construir mapa de check-ins por fecha (YYYY-MM-DD)
+    final checkinsMap = <String, String>{};
+    for (final c in checkins) {
+      if (c is Map<String, dynamic>) {
+        final fecha = _extraerFecha(c['fecha']?.toString() ?? '');
+        checkinsMap[fecha] = c['estadoEmocional']?.toString() ?? '';
+      }
+    }
+
+    // Generar los 7 días de la semana actual (Lun a Dom)
+    final now = DateTime.now();
+    // weekday: 1=Lun, 7=Dom
+    final lunes = now.subtract(Duration(days: now.weekday - 1));
+    final dias = List.generate(7, (i) {
+      final dia = lunes.add(Duration(days: i));
+      final fechaKey = _formatFecha(dia);
+      return CheckinDiaModel(
+        fecha: fechaKey,
+        estadoEmocional: checkinsMap[fechaKey],
+        misionCompletada: misionesMap[fechaKey] ?? false,
+      );
+    });
+
+    // Contar días activos (días con check-in)
+    final diasActivos = dias.where((d) => d.estadoEmocional != null).length;
+
     return ProgresoWeeklyModel(
-      estadoMasFrecuente: json['estadoMasFrecuente']?.toString() ?? '',
+      estadoMasFrecuente: json['estadoFrecuente']?.toString() ?? '',
       misionesCompletadas: json['misionesCompletadas'] ?? 0,
-      diasActivos: json['diasActivos'] ?? 0,
-      dias: diasList,
+      diasActivos: diasActivos,
+      dias: dias,
     );
+  }
+
+  /// Extrae YYYY-MM-DD de un string ISO datetime.
+  static String _extraerFecha(String isoString) {
+    if (isoString.length >= 10) {
+      return isoString.substring(0, 10);
+    }
+    return isoString;
+  }
+
+  /// Formatea un DateTime como YYYY-MM-DD.
+  static String _formatFecha(DateTime fecha) {
+    final y = fecha.year.toString().padLeft(4, '0');
+    final m = fecha.month.toString().padLeft(2, '0');
+    final d = fecha.day.toString().padLeft(2, '0');
+    return '$y-$m-$d';
   }
 }
 
@@ -60,7 +132,11 @@ class CheckinDiaModel {
   final String? estadoEmocional;
   final bool misionCompletada;
 
-  const CheckinDiaModel({required this.fecha, this.estadoEmocional, this.misionCompletada = false});
+  const CheckinDiaModel({
+    required this.fecha,
+    this.estadoEmocional,
+    this.misionCompletada = false,
+  });
 
   factory CheckinDiaModel.fromJson(Map<String, dynamic> json) {
     return CheckinDiaModel(

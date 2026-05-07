@@ -1,3 +1,4 @@
+//C:\Proyectos\Kintsugi\kintsugi_app\lib\application\home\home_state.dart
 import 'package:equatable/equatable.dart';
 import '../../data/models/user_model.dart';
 import '../../data/models/checkin_model.dart';

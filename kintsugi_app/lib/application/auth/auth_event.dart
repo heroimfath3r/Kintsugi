@@ -1,3 +1,5 @@
+// lib/application/auth/auth_event.dart
+
 import 'package:equatable/equatable.dart';
 
 abstract class AuthEvent extends Equatable {
@@ -35,4 +37,25 @@ class AuthSetArchetype extends AuthEvent {
   const AuthSetArchetype({required this.arquetipoId});
   @override
   List<Object?> get props => [arquetipoId];
+}
+
+// ── NUEVOS ──────────────────────────────────────────────────────────────
+
+/// Usuario olvidó su contraseña → envía correo de reset via Firebase.
+class AuthForgotPasswordRequested extends AuthEvent {
+  final String email;
+  const AuthForgotPasswordRequested({required this.email});
+  @override
+  List<Object?> get props => [email];
+}
+
+/// Reenvía el correo de verificación al usuario actual.
+class AuthSendEmailVerification extends AuthEvent {
+  const AuthSendEmailVerification();
+}
+
+/// Hace reload del usuario de Firebase y checa si emailVerified cambió.
+/// Es lo que se ejecuta cuando el usuario toca "Ya verifiqué mi correo".
+class AuthCheckEmailVerified extends AuthEvent {
+  const AuthCheckEmailVerified();
 }

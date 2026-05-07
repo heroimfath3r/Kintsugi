@@ -1,3 +1,6 @@
+// Reemplaza TODO el contenido de:
+// lib/presentation/screens/auth/auth_screen.dart
+
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -5,6 +8,7 @@ import 'package:kintsugi_app/core/theme/app_colors.dart';
 import 'package:kintsugi_app/application/auth/auth_bloc.dart';
 import 'package:kintsugi_app/application/auth/auth_event.dart';
 import 'package:kintsugi_app/application/auth/auth_state.dart';
+import 'package:kintsugi_app/presentation/screens/auth/forgot_password_screen.dart';
 
 enum AuthMode { register, login }
 
@@ -95,7 +99,7 @@ class _AuthScreenState extends State<AuthScreen> {
 
     if (!_isFormValid) return;
 
-    // Disparar evento al BLoC en vez del bypass
+    // Disparar evento al BLoC
     if (_mode == AuthMode.register) {
       context.read<AuthBloc>().add(
             AuthRegisterRequested(email: email, password: pw),
@@ -310,6 +314,27 @@ class _AuthScreenState extends State<AuthScreen> {
         _emailField(),
         const SizedBox(height: 14),
         _passwordField(),
+        // ── NUEVO: Link "¿Olvidaste tu contraseña?" ──
+        const SizedBox(height: 10),
+        Align(
+          alignment: Alignment.centerRight,
+          child: GestureDetector(
+            onTap: () {
+              Navigator.of(context).push(MaterialPageRoute(
+                builder: (_) => const ForgotPasswordScreen(),
+              ));
+            },
+            child: const Text(
+              '¿Olvidaste tu contraseña?',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                fontWeight: FontWeight.w500,
+                color: AppColors.accentPrimary,
+              ),
+            ),
+          ),
+        ),
       ],
     );
   }

@@ -1,3 +1,6 @@
+// Reemplaza TODO el contenido de:
+// lib/main.dart
+
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:firebase_core/firebase_core.dart';
@@ -9,6 +12,7 @@ import 'package:kintsugi_app/application/auth/auth_event.dart';
 import 'package:kintsugi_app/application/auth/auth_state.dart';
 import 'package:kintsugi_app/data/services/auth_service.dart';
 import 'package:kintsugi_app/presentation/screens/auth/auth_screen.dart';
+import 'package:kintsugi_app/presentation/screens/auth/email_verification_screen.dart';
 import 'package:kintsugi_app/presentation/screens/auth/test_sintonia_screen.dart';
 import 'package:kintsugi_app/presentation/screens/home/home_screen.dart';
 
@@ -44,20 +48,33 @@ class _AuthGate extends StatelessWidget {
   Widget build(BuildContext context) {
     return BlocBuilder<AuthBloc, AuthState>(
       builder: (context, state) {
+        // 1. Cargando → Splash
         if (state is AuthInitial || state is AuthLoading) {
           return const _SplashScreen();
         }
+
+        // 2. Autenticado → decidir siguiente paso
         if (state is AuthAuthenticated) {
+          // 2a. Email no verificado → pantalla de verificación
+          if (!state.emailVerified) {
+            return EmailVerificationScreen(email: state.user.email);
+          }
+          // 2b. Email verificado, sin arquetipo → Test de Sintonía
           if (!state.user.tieneArquetipo) {
             return const TestSintoniaScreen();
           }
+          // 2c. Email verificado, con arquetipo → Home
           return HomeScreen(arquetipoId: state.user.arquetipo!);
         }
+
+        // 3. No autenticado o cualquier otro estado → Welcome
         return const _WelcomeScreen();
       },
     );
   }
 }
+
+// ── Splash Screen ───────────────────────────────────────────────────────
 
 class _SplashScreen extends StatelessWidget {
   const _SplashScreen();
@@ -97,6 +114,8 @@ class _SplashScreen extends StatelessWidget {
     );
   }
 }
+
+// ── Welcome Screen ──────────────────────────────────────────────────────
 
 class _WelcomeScreen extends StatelessWidget {
   const _WelcomeScreen();

@@ -79,7 +79,6 @@ class _TestSintoniaScreenState extends State<TestSintoniaScreen> {
   int _preguntaIndex = 0;
   int? _seleccionada;
 
-  // Puntos acumulados por arquetipo
   final Map<String, int> _puntos = {
     'thorfinn': 0,
     'rocklee': 0,
@@ -98,12 +97,11 @@ class _TestSintoniaScreenState extends State<TestSintoniaScreen> {
   void _siguiente() {
     if (_seleccionada == null) return;
 
-    // Acumular punto al arquetipo correspondiente
     final arquetipo = _preguntaActual.opciones[_seleccionada!].arquetipo;
     _puntos[arquetipo] = (_puntos[arquetipo] ?? 0) + 1;
 
     if (_esUltima) {
-      Navigator.of(context).pushReplacement(
+      Navigator.of(context).push(
         MaterialPageRoute(
           builder: (_) => ResultadoArquetipoScreen(puntos: Map.from(_puntos)),
         ),
@@ -117,28 +115,52 @@ class _TestSintoniaScreenState extends State<TestSintoniaScreen> {
     });
   }
 
+  // ══════════════════════════════════════════════════════════════════════
+  // FIX: Botón atrás inteligente
+  // Si estamos en pregunta > 0, volver a la pregunta anterior.
+  // Si estamos en pregunta 0, no hacer nada (el _AuthGate nos puso aquí,
+  // no hay ruta anterior a la cual volver).
+  // ══════════════════════════════════════════════════════════════════════
+  void _retroceder() {
+    if (_preguntaIndex > 0) {
+      setState(() {
+        _preguntaIndex--;
+        _seleccionada = null;
+      });
+    }
+    // Si estamos en la primera pregunta, no hacemos nada.
+    // El usuario ya está autenticado y DEBE completar el test.
+  }
+
   @override
   Widget build(BuildContext context) {
     final numero = (_preguntaIndex + 1).toString().padLeft(2, '0');
 
-    return Scaffold(
-      backgroundColor: AppColors.backgroundPrimary,
-      body: SafeArea(
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildHeader(context),
-            const SizedBox(height: 8),
-            _buildProgreso(),
-            const SizedBox(height: 28),
-            Expanded(
-              child: SingleChildScrollView(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                child: _buildCard(numero),
+    return PopScope(
+      // Bloquear botón atrás del sistema: el test es obligatorio
+      canPop: false,
+      onPopInvokedWithResult: (didPop, _) {
+        if (!didPop) _retroceder();
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundPrimary,
+        body: SafeArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildHeader(context),
+              const SizedBox(height: 8),
+              _buildProgreso(),
+              const SizedBox(height: 28),
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: _buildCard(numero),
+                ),
               ),
-            ),
-            _buildBotonSiguiente(),
-          ],
+              _buildBotonSiguiente(),
+            ],
+          ),
         ),
       ),
     );
@@ -154,13 +176,17 @@ class _TestSintoniaScreenState extends State<TestSintoniaScreen> {
         children: [
           Align(
             alignment: Alignment.centerLeft,
-            child: IconButton(
-              icon: const Icon(Icons.arrow_back,
-                  color: AppColors.textPrimary, size: 22),
-              onPressed: () => Navigator.of(context).pop(),
-              padding: EdgeInsets.zero,
-              constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
-            ),
+            child: _preguntaIndex > 0
+                ? IconButton(
+                    icon: const Icon(Icons.arrow_back,
+                        color: AppColors.textPrimary, size: 22),
+                    onPressed: _retroceder,
+                    padding: EdgeInsets.zero,
+                    constraints:
+                        const BoxConstraints(minWidth: 32, minHeight: 32),
+                  )
+                // En la primera pregunta, no mostramos flecha de atrás
+                : const SizedBox(width: 32, height: 32),
           ),
           Column(
             mainAxisSize: MainAxisSize.min,
@@ -225,19 +251,17 @@ class _TestSintoniaScreenState extends State<TestSintoniaScreen> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Número decorativo
           Text(
             numero,
             style: const TextStyle(
               fontFamily: 'Cinzel',
               fontSize: 48,
               fontWeight: FontWeight.w700,
-              color: Color(0x33C9A84C), // #C9A84C al ~20%
+              color: Color(0x33C9A84C),
               height: 1,
             ),
           ),
           const SizedBox(height: 16),
-          // Texto de la pregunta
           Text(
             _preguntaActual.texto,
             style: const TextStyle(
@@ -249,7 +273,6 @@ class _TestSintoniaScreenState extends State<TestSintoniaScreen> {
             ),
           ),
           const SizedBox(height: 20),
-          // Opciones
           ...List.generate(_preguntaActual.opciones.length, (i) {
             return Padding(
               padding: EdgeInsets.only(
@@ -333,7 +356,7 @@ class _OpcionCard extends StatelessWidget {
         height: 64,
         decoration: BoxDecoration(
           color: seleccionada
-              ? const Color(0x26C9A84C) // #C9A84C al 15%
+              ? const Color(0x26C9A84C)
               : const Color(0xFF242424),
           borderRadius: BorderRadius.circular(12),
           border: Border.all(

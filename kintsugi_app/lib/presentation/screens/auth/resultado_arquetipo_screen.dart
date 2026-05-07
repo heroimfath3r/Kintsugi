@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kintsugi_app/core/theme/app_colors.dart';
-import 'package:kintsugi_app/presentation/screens/home/home_screen.dart';
+import 'package:kintsugi_app/application/auth/auth_bloc.dart';
+import 'package:kintsugi_app/application/auth/auth_event.dart';
+import 'package:kintsugi_app/application/auth/auth_state.dart';
 
 // ── Datos por arquetipo ────────────────────────────────────────────────────────
 
@@ -104,6 +107,7 @@ class ResultadoArquetipoScreen extends StatefulWidget {
 class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
   late String _arquetipoSeleccionado;
   late List<String> _empate;
+  bool _guardando = false;
 
   @override
   void initState() {
@@ -121,7 +125,6 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
       _arquetipoSeleccionado = ganadores.first;
       _empate = [];
     } else {
-      // Empate: mostrar el primero por defecto, el usuario puede cambiar
       _arquetipoSeleccionado = ganadores.first;
       _empate = ganadores;
     }
@@ -131,70 +134,100 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
 
   bool get _hayEmpate => _empate.length > 1;
 
+  // ══════════════════════════════════════════════════════════════════════
+  // FIX PRINCIPAL: Guardar arquetipo en el backend vía AuthBloc
+  // ══════════════════════════════════════════════════════════════════════
+  void _aceptarArquetipo() {
+    setState(() => _guardando = true);
+    context.read<AuthBloc>().add(AuthSetArchetype(arquetipoId: _arquetipoSeleccionado));
+    // El BlocListener se encarga de navegar cuando AuthAuthenticated llega
+    // con el arquetipo ya seteado.
+  }
+
   // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundPrimary,
-      body: Stack(
-        children: [
-          // Imagen de fondo full screen
-          Positioned.fill(
-            child: Image.asset(
-              _data.imagenFase1,
-              fit: BoxFit.cover,
-              errorBuilder: (context, error, stack) => const ColoredBox(
-                color: Color(0xFF1A1A1A),
-              ),
-            ),
-          ),
-          // Gradiente: visible top 20% → #0D0D0D desde middle → sólido bottom 55%
-          Positioned.fill(
-            child: DecoratedBox(
-              decoration: const BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  stops: [0.20, 0.45, 1.0],
-                  colors: [
-                    Colors.transparent,
-                    Color(0xCC0D0D0D),
-                    Color(0xFF0D0D0D),
-                  ],
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated && state.user.tieneArquetipo) {
+          // Arquetipo guardado exitosamente en el backend.
+          // Volvemos al _AuthGate que ahora verá tieneArquetipo == true
+          // y mostrará el HomeScreen automáticamente.
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+        if (state is AuthError) {
+          setState(() => _guardando = false);
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
+        }
+      },
+      child: PopScope(
+        // Bloquear botón atrás mientras se guarda
+        canPop: !_guardando,
+        child: Scaffold(
+          backgroundColor: AppColors.backgroundPrimary,
+          body: Stack(
+            children: [
+              // Imagen de fondo full screen
+              Positioned.fill(
+                child: Image.asset(
+                  _data.imagenFase1,
+                  fit: BoxFit.cover,
+                  errorBuilder: (context, error, stack) => const ColoredBox(
+                    color: Color(0xFF1A1A1A),
+                  ),
                 ),
               ),
-            ),
-          ),
-          // Contenido
-          SafeArea(
-            child: Column(
-              children: [
-                _buildBackButton(context),
-                Expanded(
-                  child: SingleChildScrollView(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.stretch,
-                      children: [
-                        const SizedBox(height: 16),
-                        _buildPill(),
-                        const SizedBox(height: 20),
-                        _buildNombre(),
-                        const SizedBox(height: 28),
-                        _buildCard(),
-                        const SizedBox(height: 28),
-                        _buildBotonPrincipal(context),
-                        const SizedBox(height: 16),
-                        _buildVerOtros(context),
-                        const SizedBox(height: 32),
+              // Gradiente
+              const Positioned.fill(
+                child: DecoratedBox(
+                  decoration: BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      stops: [0.20, 0.45, 1.0],
+                      colors: [
+                        Colors.transparent,
+                        Color(0xCC0D0D0D),
+                        Color(0xFF0D0D0D),
                       ],
                     ),
                   ),
                 ),
-              ],
-            ),
+              ),
+              // Contenido
+              SafeArea(
+                child: Column(
+                  children: [
+                    _buildBackButton(context),
+                    Expanded(
+                      child: SingleChildScrollView(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            const SizedBox(height: 16),
+                            _buildPill(),
+                            const SizedBox(height: 20),
+                            _buildNombre(),
+                            const SizedBox(height: 28),
+                            _buildCard(),
+                            const SizedBox(height: 28),
+                            _buildBotonPrincipal(context),
+                            const SizedBox(height: 16),
+                            _buildVerOtros(context),
+                            const SizedBox(height: 32),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
           ),
-        ],
+        ),
       ),
     );
   }
@@ -209,7 +242,7 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
         child: IconButton(
           icon: const Icon(Icons.arrow_back,
               color: AppColors.textPrimary, size: 22),
-          onPressed: () => Navigator.of(context).pop(),
+          onPressed: _guardando ? null : () => Navigator.of(context).pop(),
           padding: EdgeInsets.zero,
           constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
         ),
@@ -224,7 +257,7 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0x33C9A84C), // #C9A84C al 20%
+          color: const Color(0x33C9A84C),
           borderRadius: BorderRadius.circular(100),
           border: Border.all(color: AppColors.accentPrimary),
         ),
@@ -280,7 +313,7 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xE61A1A1A), // #1A1A1A al 90%
+          color: const Color(0xE61A1A1A),
           borderRadius: BorderRadius.circular(20),
           border: Border.all(color: const Color(0xFF2A2A2A)),
         ),
@@ -353,19 +386,12 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
       child: SizedBox(
         height: 56,
         child: ElevatedButton(
-          onPressed: () {
-            // TODO: guardar arquetipo en Firestore + Hive antes de navegar
-            Navigator.of(context).pushAndRemoveUntil(
-              MaterialPageRoute(
-                builder: (_) =>
-                    HomeScreen(arquetipoId: _arquetipoSeleccionado),
-              ),
-              (_) => false,
-            );
-          },
+          onPressed: _guardando ? null : _aceptarArquetipo,
           style: ElevatedButton.styleFrom(
             backgroundColor: AppColors.accentPrimary,
             foregroundColor: AppColors.backgroundPrimary,
+            disabledBackgroundColor:
+                AppColors.accentPrimary.withValues(alpha: 0.5),
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(8),
@@ -377,7 +403,17 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
               letterSpacing: 1.5,
             ),
           ),
-          child: const Text('COMENZAR MI CAMINO'),
+          child: _guardando
+              ? const SizedBox(
+                  width: 22,
+                  height: 22,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2.5,
+                    valueColor: AlwaysStoppedAnimation<Color>(
+                        AppColors.backgroundPrimary),
+                  ),
+                )
+              : const Text('ACEPTAR GUÍA'),
         ),
       ),
     );
@@ -387,7 +423,7 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
 
   Widget _buildVerOtros(BuildContext context) {
     return GestureDetector(
-      onTap: () => _mostrarSelectorArquetipos(context),
+      onTap: _guardando ? null : () => _mostrarSelectorArquetipos(context),
       child: const Text(
         'Este no soy yo, ver otros arquetipos',
         textAlign: TextAlign.center,
@@ -538,4 +574,3 @@ class _SelectorArquetiposSheet extends StatelessWidget {
     );
   }
 }
-

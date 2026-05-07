@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "392136453535",
+    "project_id": "kinttsugi-app",
+    "storage_bucket": "kinttsugi-app.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:392136453535:android:f8da4de887e05c8e72a1aa",
+        "android_client_info": {
+          "package_name": "com.kintsugi.kintsugi_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyB16T9Q1IWrFQIe6myLzbx8Y170HKwWkkE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

@@ -1,7 +1,10 @@
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kintsugi_app/core/theme/app_colors.dart';
-import 'package:kintsugi_app/presentation/screens/auth/test_sintonia_screen.dart';
+import 'package:kintsugi_app/application/auth/auth_bloc.dart';
+import 'package:kintsugi_app/application/auth/auth_event.dart';
+import 'package:kintsugi_app/application/auth/auth_state.dart';
 
 enum AuthMode { register, login }
 
@@ -42,7 +45,7 @@ class _AuthScreenState extends State<AuthScreen> {
     super.dispose();
   }
 
-  // ── Validation ────────────────────────────────────────────────────────────
+  // ── Validation ────────────────────────────────────────────────────────
 
   bool _isValidEmail(String v) =>
       RegExp(r'^[\w\-.]+@([\w-]+\.)+[\w-]{2,4}$').hasMatch(v.trim());
@@ -89,34 +92,18 @@ class _AuthScreenState extends State<AuthScreen> {
                 : null;
       }
     });
-    if (_isFormValid) {
-      if (_mode == AuthMode.register) {
-        Navigator.of(context).pushReplacement(
-          MaterialPageRoute(builder: (_) => const TestSintoniaScreen()),
-        );
-      } else {
-        // TODO: TEMPORAL - eliminar antes de conectar Firebase
-        // Navega directo al home sin validar credenciales
-        // Reemplazar con AuthBloc.add(LoginRequested(...))
-        Navigator.of(context).pushAndRemoveUntil(
-          MaterialPageRoute(
-            builder: (_) => const Scaffold(
-              backgroundColor: Color(0xFF0D0D0D),
-              body: Center(
-                child: Text(
-                  'Home — próximamente',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    color: Color(0xFF9E9E9E),
-                  ),
-                ),
-              ),
-            ),
-          ),
-          (_) => false,
-        );
-      }
+
+    if (!_isFormValid) return;
+
+    // Disparar evento al BLoC en vez del bypass
+    if (_mode == AuthMode.register) {
+      context.read<AuthBloc>().add(
+            AuthRegisterRequested(email: email, password: pw),
+          );
+    } else {
+      context.read<AuthBloc>().add(
+            AuthLoginRequested(email: email, password: pw),
+          );
     }
   }
 
@@ -130,64 +117,74 @@ class _AuthScreenState extends State<AuthScreen> {
     });
   }
 
-  // ── Build ─────────────────────────────────────────────────────────────────
+  // ── Build ─────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.backgroundPrimary,
-      body: Stack(
-        children: [
-          // Background image
-          Positioned.fill(
-            child: Image.asset(
-              'assets/images/welcome_bg.png',
-              fit: BoxFit.cover,
-            ),
-          ),
-          // Dark overlay 85% → 0xD9 = 217
-          const Positioned.fill(
-            child: ColoredBox(color: Color(0xD90D0D0D)),
-          ),
-          // Content
-          SafeArea(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 8),
-                  _buildHeader(context),
-                  const SizedBox(height: 32),
-                  _buildToggle(),
-                  const SizedBox(height: 28),
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 220),
-                    transitionBuilder: (child, anim) =>
-                        FadeTransition(opacity: anim, child: child),
-                    child: _mode == AuthMode.register
-                        ? _buildRegisterFields()
-                        : _buildLoginFields(),
-                  ),
-                  const SizedBox(height: 20),
-                  _buildSubmitButton(),
-                  const SizedBox(height: 28),
-                  _buildDivider(),
-                  const SizedBox(height: 20),
-                  _buildSocialButtons(),
-                  const SizedBox(height: 24),
-                  _buildLegalText(),
-                  const SizedBox(height: 32),
-                ],
+    return BlocListener<AuthBloc, AuthState>(
+      listener: (context, state) {
+        if (state is AuthAuthenticated) {
+          // El _AuthGate en main.dart se encarga de navegar.
+          Navigator.of(context).popUntil((route) => route.isFirst);
+        }
+        if (state is AuthError) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(state.message)),
+          );
+        }
+      },
+      child: Scaffold(
+        backgroundColor: AppColors.backgroundPrimary,
+        body: Stack(
+          children: [
+            Positioned.fill(
+              child: Image.asset(
+                'assets/images/welcome_bg.png',
+                fit: BoxFit.cover,
               ),
             ),
-          ),
-        ],
+            const Positioned.fill(
+              child: ColoredBox(color: Color(0xD90D0D0D)),
+            ),
+            SafeArea(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    const SizedBox(height: 8),
+                    _buildHeader(context),
+                    const SizedBox(height: 32),
+                    _buildToggle(),
+                    const SizedBox(height: 28),
+                    AnimatedSwitcher(
+                      duration: const Duration(milliseconds: 220),
+                      transitionBuilder: (child, anim) =>
+                          FadeTransition(opacity: anim, child: child),
+                      child: _mode == AuthMode.register
+                          ? _buildRegisterFields()
+                          : _buildLoginFields(),
+                    ),
+                    const SizedBox(height: 20),
+                    _buildSubmitButton(),
+                    const SizedBox(height: 28),
+                    _buildDivider(),
+                    const SizedBox(height: 20),
+                    _buildSocialButtons(),
+                    const SizedBox(height: 24),
+                    _buildLegalText(),
+                    const SizedBox(height: 32),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
       ),
     );
   }
 
-  // ── Header ────────────────────────────────────────────────────────────────
+  // ── Header ────────────────────────────────────────────────────────────
 
   Widget _buildHeader(BuildContext context) {
     return Column(
@@ -196,7 +193,8 @@ class _AuthScreenState extends State<AuthScreen> {
         Align(
           alignment: Alignment.centerLeft,
           child: IconButton(
-            icon: const Icon(Icons.arrow_back, color: AppColors.textPrimary, size: 22),
+            icon: const Icon(Icons.arrow_back,
+                color: AppColors.textPrimary, size: 22),
             onPressed: () => Navigator.of(context).pop(),
             padding: EdgeInsets.zero,
             constraints: const BoxConstraints(minWidth: 32, minHeight: 32),
@@ -229,7 +227,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  // ── Toggle ────────────────────────────────────────────────────────────────
+  // ── Toggle ────────────────────────────────────────────────────────────
 
   Widget _buildToggle() {
     return Container(
@@ -264,8 +262,7 @@ class _AuthScreenState extends State<AuthScreen> {
             style: TextStyle(
               fontFamily: 'Inter',
               fontSize: 14,
-              fontWeight:
-                  isActive ? FontWeight.w600 : FontWeight.w400,
+              fontWeight: isActive ? FontWeight.w600 : FontWeight.w400,
               color: isActive
                   ? AppColors.backgroundPrimary
                   : AppColors.textSecondary,
@@ -276,7 +273,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  // ── Fields ────────────────────────────────────────────────────────────────
+  // ── Fields ────────────────────────────────────────────────────────────
 
   Widget _buildRegisterFields() {
     return Column(
@@ -324,7 +321,8 @@ class _AuthScreenState extends State<AuthScreen> {
       style: _inputTextStyle,
       decoration: InputDecoration(
         hintText: 'correo@ejemplo.com',
-        prefixIcon: const Icon(Icons.mail_outline, color: AppColors.textSecondary, size: 20),
+        prefixIcon: const Icon(Icons.mail_outline,
+            color: AppColors.textSecondary, size: 20),
         errorText: _emailError,
         errorStyle: _errorStyle,
       ),
@@ -339,7 +337,8 @@ class _AuthScreenState extends State<AuthScreen> {
       style: _inputTextStyle,
       decoration: InputDecoration(
         hintText: 'Mínimo 8 caracteres',
-        prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary, size: 20),
+        prefixIcon: const Icon(Icons.lock_outline,
+            color: AppColors.textSecondary, size: 20),
         errorText: _passwordError,
         errorStyle: _errorStyle,
         suffixIcon: _eyeButton(
@@ -358,7 +357,8 @@ class _AuthScreenState extends State<AuthScreen> {
       style: _inputTextStyle,
       decoration: InputDecoration(
         hintText: 'Repite tu contraseña',
-        prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary, size: 20),
+        prefixIcon: const Icon(Icons.lock_outline,
+            color: AppColors.textSecondary, size: 20),
         errorText: _confirmPasswordError,
         errorStyle: _errorStyle,
         suffixIcon: _eyeButton(
@@ -392,44 +392,58 @@ class _AuthScreenState extends State<AuthScreen> {
   static const _errorStyle = TextStyle(
     fontFamily: 'Inter',
     fontSize: 12,
-    color: AppColors.error, // #CF6679
+    color: AppColors.error,
   );
 
-  // ── Submit button ─────────────────────────────────────────────────────────
+  // ── Submit button ─────────────────────────────────────────────────────
 
   Widget _buildSubmitButton() {
-    final label =
-        _mode == AuthMode.register ? 'CREAR CUENTA' : 'INICIAR SESIÓN';
-    final enabled = _isFormValid;
-    return Opacity(
-      opacity: enabled ? 1.0 : 0.5,
-      child: SizedBox(
-        height: 52,
-        child: ElevatedButton(
-          onPressed: enabled ? _validateAndSubmit : null,
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.accentPrimary,
-            foregroundColor: AppColors.backgroundPrimary,
-            disabledBackgroundColor: AppColors.accentPrimary,
-            disabledForegroundColor: AppColors.backgroundPrimary,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
+    return BlocBuilder<AuthBloc, AuthState>(
+      builder: (context, state) {
+        final isLoading = state is AuthLoading;
+        final label =
+            _mode == AuthMode.register ? 'CREAR CUENTA' : 'INICIAR SESIÓN';
+
+        return SizedBox(
+          height: 52,
+          child: ElevatedButton(
+            onPressed: isLoading ? null : _validateAndSubmit,
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.accentPrimary,
+              foregroundColor: AppColors.backgroundPrimary,
+              disabledBackgroundColor:
+                  AppColors.accentPrimary.withValues(alpha: 0.5),
+              disabledForegroundColor:
+                  AppColors.backgroundPrimary.withValues(alpha: 0.5),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              elevation: 0,
+              textStyle: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 15,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.5,
+              ),
             ),
-            elevation: 0,
-            textStyle: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 15,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 1.5,
-            ),
+            child: isLoading
+                ? const SizedBox(
+                    width: 22,
+                    height: 22,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2.5,
+                      valueColor: AlwaysStoppedAnimation<Color>(
+                          AppColors.backgroundPrimary),
+                    ),
+                  )
+                : Text(label),
           ),
-          child: Text(label),
-        ),
-      ),
+        );
+      },
     );
   }
 
-  // ── Divider ───────────────────────────────────────────────────────────────
+  // ── Divider ───────────────────────────────────────────────────────────
 
   Widget _buildDivider() {
     return const Row(
@@ -452,7 +466,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  // ── Social buttons ────────────────────────────────────────────────────────
+  // ── Social buttons ────────────────────────────────────────────────────
 
   Widget _buildSocialButtons() {
     return Row(
@@ -462,7 +476,7 @@ class _AuthScreenState extends State<AuthScreen> {
             label: 'Google',
             icon: const _GoogleIcon(),
             onPressed: () {
-              // TODO: dispatch GoogleSignInEvent
+              // TODO: Google Sign In
             },
           ),
         ),
@@ -470,9 +484,10 @@ class _AuthScreenState extends State<AuthScreen> {
         Expanded(
           child: _SocialButton(
             label: 'Apple',
-            icon: const Icon(Icons.apple, size: 20, color: AppColors.textPrimary),
+            icon: const Icon(Icons.apple,
+                size: 20, color: AppColors.textPrimary),
             onPressed: () {
-              // TODO: dispatch AppleSignInEvent
+              // TODO: Apple Sign In
             },
           ),
         ),
@@ -480,7 +495,7 @@ class _AuthScreenState extends State<AuthScreen> {
     );
   }
 
-  // ── Legal text ────────────────────────────────────────────────────────────
+  // ── Legal text ────────────────────────────────────────────────────────
 
   Widget _buildLegalText() {
     return Text.rich(
@@ -501,10 +516,7 @@ class _AuthScreenState extends State<AuthScreen> {
               decoration: TextDecoration.underline,
               decorationColor: AppColors.accentPrimary,
             ),
-            recognizer: TapGestureRecognizer()
-              ..onTap = () {
-                // TODO: open terms
-              },
+            recognizer: TapGestureRecognizer()..onTap = () {},
           ),
           const TextSpan(text: ' y '),
           TextSpan(
@@ -514,10 +526,7 @@ class _AuthScreenState extends State<AuthScreen> {
               decoration: TextDecoration.underline,
               decorationColor: AppColors.accentPrimary,
             ),
-            recognizer: TapGestureRecognizer()
-              ..onTap = () {
-                // TODO: open privacy policy
-              },
+            recognizer: TapGestureRecognizer()..onTap = () {},
           ),
         ],
       ),
@@ -526,7 +535,7 @@ class _AuthScreenState extends State<AuthScreen> {
   }
 }
 
-// ── Social button ─────────────────────────────────────────────────────────────
+// ── Social button ───────────────────────────────────────────────────────
 
 class _SocialButton extends StatelessWidget {
   final String label;
@@ -576,7 +585,7 @@ class _SocialButton extends StatelessWidget {
   }
 }
 
-// ── Google G icon (multicolor) ────────────────────────────────────────────────
+// ── Google G icon ───────────────────────────────────────────────────────
 
 class _GoogleIcon extends StatelessWidget {
   const _GoogleIcon();
@@ -602,44 +611,27 @@ class _GoogleGPainter extends CustomPainter {
       ..strokeWidth = strokeW
       ..strokeCap = StrokeCap.round;
 
-    // Blue segment (top → right, ~270° to 30°)
     paint.color = const Color(0xFF4285F4);
     canvas.drawArc(
       Rect.fromCircle(center: c, radius: r - strokeW / 2),
-      _deg(-70),
-      _deg(155),
-      false,
-      paint,
+      _deg(-70), _deg(155), false, paint,
     );
-    // Red segment
     paint.color = const Color(0xFFEA4335);
     canvas.drawArc(
       Rect.fromCircle(center: c, radius: r - strokeW / 2),
-      _deg(-225),
-      _deg(90),
-      false,
-      paint,
+      _deg(-225), _deg(90), false, paint,
     );
-    // Yellow segment
     paint.color = const Color(0xFFFBBC05);
     canvas.drawArc(
       Rect.fromCircle(center: c, radius: r - strokeW / 2),
-      _deg(-135),
-      _deg(65),
-      false,
-      paint,
+      _deg(-135), _deg(65), false, paint,
     );
-    // Green segment
     paint.color = const Color(0xFF34A853);
     canvas.drawArc(
       Rect.fromCircle(center: c, radius: r - strokeW / 2),
-      _deg(85),
-      _deg(50),
-      false,
-      paint,
+      _deg(85), _deg(50), false, paint,
     );
 
-    // Horizontal bar of the "G"
     paint
       ..color = const Color(0xFF4285F4)
       ..strokeWidth = strokeW

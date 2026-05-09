@@ -1,0 +1,88 @@
+# Pipeline CI - Kintsugi Frontend (Flutter)
+# Equivalente al pipeline del backend pero adaptado para Dart/Flutter
+# Fases: A (Configuración), B (SAST), C (SCA), D (Tests + Artefacto)
+
+trigger:
+  - main
+
+pool:
+  name: 'local'
+
+steps:
+  # ================================================
+  # FASE A: Configuración del entorno e instalación
+  # ================================================
+  - script: |
+      flutter --version
+    displayName: 'Fase A.1 - Verificar Flutter SDK'
+
+  - script: |
+      cd kintsugi_app
+      flutter pub get
+    displayName: 'Fase A.2 - Instalación de dependencias (flutter pub get)'
+
+  # ================================================
+  # FASE B: Análisis de Seguridad Estático (SAST)
+  # ================================================
+  - script: |
+      cd kintsugi_app
+      flutter analyze --no-fatal-infos
+    displayName: 'Fase B.1 - Análisis estático de código (flutter analyze)'
+
+  - script: |
+      echo === SAST: Buscando patrones de riesgo en codigo Dart ===
+      echo.
+      echo --- Buscando hardcoded API keys/tokens ---
+      findstr /S /I /N "api_key\|apiKey\|API_KEY\|secret_key\|secretKey" kintsugi_app\lib\*.dart
+      echo.
+      echo --- Buscando URLs hardcodeadas (http://) ---
+      findstr /S /I /N "http://" kintsugi_app\lib\*.dart
+      echo.
+      echo --- Buscando Process.run (ejecucion de comandos) ---
+      findstr /S /I /N "Process.run\|Process.start" kintsugi_app\lib\*.dart
+      echo.
+      echo --- Buscando eval o codigo dinamico ---
+      findstr /S /I /N "dart:mirrors\|noSuchMethod" kintsugi_app\lib\*.dart
+      echo.
+      echo --- Buscando passwords hardcodeados ---
+      findstr /S /I /N "password\s*=\s*[\"']\|passwd\|contraseña" kintsugi_app\lib\*.dart
+      echo.
+      echo === SAST completado ===
+      exit /b 0
+    displayName: 'Fase B.2 - Búsqueda de patrones de seguridad (SAST manual)'
+
+  # ================================================
+  # FASE C: Análisis de Composición de Software (SCA)
+  # ================================================
+  - script: |
+      cd kintsugi_app
+      flutter pub outdated
+    continueOnError: true
+    displayName: 'Fase C - Análisis de dependencias (SCA - flutter pub outdated)'
+
+  # ================================================
+  # FASE D: Pruebas y Generación de Artefacto
+  # ================================================
+  - script: |
+      cd kintsugi_app
+      flutter test
+    displayName: 'Fase D.1 - Ejecución de pruebas unitarias'
+
+  - script: |
+      cd kintsugi_app
+      flutter build apk --debug
+    displayName: 'Fase D.2 - Build APK (debug)'
+
+  - task: ArchiveFiles@2
+    inputs:
+      rootFolderOrFile: 'kintsugi_app/build/app/outputs/flutter-apk/'
+      includeRootFolder: false
+      archiveType: 'zip'
+      archiveFile: '$(Build.ArtifactStagingDirectory)/$(Build.BuildId).zip'
+    displayName: 'Fase D.3 - Empaquetado de artefacto inmutable (.zip)'
+
+  - task: PublishBuildArtifacts@1
+    inputs:
+      PathtoPublish: '$(Build.ArtifactStagingDirectory)'
+      ArtifactName: 'drop'
+    displayName: 'Fase D.4 - Publicación de artefacto'

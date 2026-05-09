@@ -33,19 +33,19 @@ steps:
       echo === SAST: Buscando patrones de riesgo en codigo Dart ===
       echo.
       echo --- Buscando hardcoded API keys/tokens ---
-      findstr /S /I /N "api_key\|apiKey\|API_KEY\|secret_key\|secretKey" kintsugi_app\lib\*.dart
+      findstr /S /I /N "api_key apiKey API_KEY secret_key secretKey" kintsugi_app\lib\*.dart
       echo.
       echo --- Buscando URLs hardcodeadas (http://) ---
       findstr /S /I /N "http://" kintsugi_app\lib\*.dart
       echo.
       echo --- Buscando Process.run (ejecucion de comandos) ---
-      findstr /S /I /N "Process.run\|Process.start" kintsugi_app\lib\*.dart
+      findstr /S /I /N "Process.run Process.start" kintsugi_app\lib\*.dart
       echo.
       echo --- Buscando eval o codigo dinamico ---
-      findstr /S /I /N "dart:mirrors\|noSuchMethod" kintsugi_app\lib\*.dart
+      findstr /S /I /N "dart:mirrors noSuchMethod" kintsugi_app\lib\*.dart
       echo.
       echo --- Buscando passwords hardcodeados ---
-      findstr /S /I /N "password\s*=\s*[\"']\|passwd\|contraseña" kintsugi_app\lib\*.dart
+      findstr /S /I /N "password= passwd= hardcoded" kintsugi_app\lib\*.dart
       echo.
       echo === SAST completado ===
       exit /b 0

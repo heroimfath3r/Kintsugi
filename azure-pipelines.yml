@@ -8,10 +8,6 @@ trigger:
 pool:
   name: 'local'
 
-variables:
-  ANDROID_HOME: 'C:\Users\heroi\AppData\Local\Android\Sdk'
-  ANDROID_SDK_ROOT: 'C:\Users\heroi\AppData\Local\Android\Sdk'
-
 steps:
   # ================================================
   # FASE A: Configuración del entorno e instalación
@@ -69,13 +65,16 @@ steps:
   # ================================================
   - script: |
       cd kintsugi_app
-      flutter build apk --debug
-    displayName: 'Fase D.2 - Build APK (debug)'
+      flutter test
+    displayName: 'Fase D.1 - Ejecución de pruebas unitarias'
 
   - script: |
       cd kintsugi_app
       flutter build apk --debug
     displayName: 'Fase D.2 - Build APK (debug)'
+    env:
+      ANDROID_HOME: 'C:\Users\heroi\AppData\Local\Android\Sdk'
+      ANDROID_SDK_ROOT: 'C:\Users\heroi\AppData\Local\Android\Sdk'
 
   - task: ArchiveFiles@2
     inputs:

@@ -8,6 +8,10 @@ trigger:
 pool:
   name: 'local'
 
+variables:
+  ANDROID_HOME: 'C:\Users\heroi\AppData\Local\Android\Sdk'
+  ANDROID_SDK_ROOT: 'C:\Users\heroi\AppData\Local\Android\Sdk'
+
 steps:
   # ================================================
   # FASE A: Configuración del entorno e instalación
@@ -64,8 +68,6 @@ steps:
   # FASE D: Pruebas y Generación de Artefacto
   # ================================================
   - script: |
-      set ANDROID_HOME=C:\Users\heroi\AppData\Local\Android\Sdk
-      set ANDROID_SDK_ROOT=C:\Users\heroi\AppData\Local\Android\Sdk
       cd kintsugi_app
       flutter build apk --debug
     displayName: 'Fase D.2 - Build APK (debug)'

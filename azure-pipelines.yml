@@ -69,9 +69,11 @@ steps:
     displayName: 'Fase D.1 - Ejecución de pruebas unitarias'
 
   - script: |
+      echo ANDROID_HOME=%ANDROID_HOME%
+      echo ANDROID_SDK_ROOT=%ANDROID_SDK_ROOT%
       cd kintsugi_app
-      flutter build apk --debug
-    displayName: 'Fase D.2 - Build APK (debug)'
+      flutter doctor -v
+    displayName: 'DEBUG - Flutter Doctor'
     env:
       ANDROID_HOME: 'C:\Users\heroi\AppData\Local\Android\Sdk'
       ANDROID_SDK_ROOT: 'C:\Users\heroi\AppData\Local\Android\Sdk'

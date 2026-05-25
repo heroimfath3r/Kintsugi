@@ -18,6 +18,7 @@ import 'package:kintsugi_app/presentation/screens/home/tabs/misiones_tab.dart';
 import 'package:kintsugi_app/presentation/screens/home/tabs/progreso_tab.dart';
 import 'package:kintsugi_app/presentation/screens/home/tabs/perfil_tab.dart';
 import 'package:kintsugi_app/core/network/connectivity_service.dart';
+import 'package:kintsugi_app/data/repositories/image_repository.dart';
 
 // ── Constantes ──────────────────────────────────────────────────────────
 
@@ -105,6 +106,15 @@ class _HomeView extends StatefulWidget {
 class _HomeViewState extends State<_HomeView> {
   int _tabIndex = 0;
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
+  late final ImageRepository _imageRepository;
+
+  @override
+  void initState() {
+    super.initState();
+    _imageRepository = sl<ImageRepository>();
+  }
+
+
 
   String get _nombre =>
       _nombres[widget.arquetipoId] ?? widget.arquetipoId.toUpperCase();
@@ -114,10 +124,10 @@ class _HomeViewState extends State<_HomeView> {
   String get _filosofia => _filosofias[widget.arquetipoId] ?? '';
 
   String get _imagenFase1 =>
-      'assets/avatars/${widget.arquetipoId}_fase1.png';
+    _imageRepository.getAvatarUrl(widget.arquetipoId, 1);
 
   String _imagenFase(int fase) =>
-      'assets/avatars/${widget.arquetipoId}_fase$fase.png';
+    _imageRepository.getAvatarUrl(widget.arquetipoId, fase);
 
   String _formatearFecha() {
     final now = DateTime.now();
@@ -154,12 +164,6 @@ class _HomeViewState extends State<_HomeView> {
                   Expanded(child: _buildCurrentTab()),
                 ],
               ),
-            ),
-            Positioned(
-              bottom: 0,
-              left: 0,
-              right: 0,
-              child: _buildBottomNavBar(),
             ),
           ],
         ),
@@ -199,7 +203,7 @@ class _HomeViewState extends State<_HomeView> {
       child: Stack(
         children: [
           Positioned.fill(
-            child: Image.asset(
+            child: Image.network(
               _imagenFase1,
               fit: BoxFit.cover,
               errorBuilder: (context, error, stack) =>
@@ -400,7 +404,7 @@ class _HomeViewState extends State<_HomeView> {
                     context, state.misionHoy!, state.misionCompletada),
               if (state.misionHoy == null && state.yaHizoCheckin)
                 _buildMisionCargando(),
-              const SizedBox(height: 80),
+              const SizedBox(height: 24),
             ],
           ),
         );
@@ -780,75 +784,4 @@ class _HomeViewState extends State<_HomeView> {
     );
   }
 
-  // ── Bottom Nav Bar ────────────────────────────────────────────────────
-
-  Widget _buildBottomNavBar() {
-    return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xF20D0D0D),
-        border: Border(top: BorderSide(color: Color(0xFF2A2A2A))),
-      ),
-      child: SafeArea(
-        top: false,
-        child: SizedBox(
-          height: 64,
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildNavItem(0, Icons.home_rounded, 'Inicio'),
-              _buildNavItem(
-                  1, Icons.check_circle_outline_rounded, 'Misiones'),
-              _buildNavItem(2, Icons.show_chart_rounded, 'Progreso'),
-              _buildNavItem(3, Icons.person_outline_rounded, 'Perfil'),
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildNavItem(int index, IconData icon, String label) {
-    final isActive = _tabIndex == index;
-    return GestureDetector(
-      behavior: HitTestBehavior.opaque,
-      onTap: () => setState(() => _tabIndex = index),
-      child: SizedBox(
-        width: 72,
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(
-              icon,
-              size: 22,
-              color: isActive
-                  ? AppColors.accentPrimary
-                  : AppColors.textSecondary,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 10,
-                fontWeight: FontWeight.w400,
-                color: isActive
-                    ? AppColors.accentPrimary
-                    : AppColors.textSecondary,
-              ),
-            ),
-            const SizedBox(height: 4),
-            AnimatedContainer(
-              duration: const Duration(milliseconds: 200),
-              width: isActive ? 4 : 0,
-              height: isActive ? 4 : 0,
-              decoration: const BoxDecoration(
-                color: AppColors.accentPrimary,
-                shape: BoxShape.circle,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
 }

@@ -169,14 +169,13 @@ class _ProgresoTabState extends State<ProgresoTab> {
                   color: AppColors.accentPrimary, width: 3),
             ),
             child: ClipOval(
-              child: Image.asset(
+              child: Image.network(
                 widget.imagenFase(progreso.fase),
                 fit: BoxFit.cover,
-                errorBuilder: (_, __, ___) => Container(
-                  color: const Color(0xFF242424),
-                  child: const Icon(Icons.person,
-                      color: AppColors.textSecondary, size: 48),
-                ),
+                loadingBuilder: (context, child, progress) =>
+                    progress == null ? child : const CircularProgressIndicator(color: AppColors.accentPrimary),
+                errorBuilder: (context, error, stackTrace) =>
+                    const Icon(Icons.broken_image, color: AppColors.textSecondary, size: 48),
               ),
             ),
           ),

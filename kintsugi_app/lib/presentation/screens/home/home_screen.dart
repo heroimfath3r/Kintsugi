@@ -1,6 +1,7 @@
 // lib/presentation/screens/home/home_screen.dart
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:kintsugi_app/core/theme/app_colors.dart';
 import 'package:kintsugi_app/core/di/service_locator.dart';
@@ -138,11 +139,52 @@ class _HomeViewState extends State<_HomeView> {
     ];
     return '${dias[now.weekday - 1]}, ${now.day} ${meses[now.month - 1]}';
   }
+  /// Muestra un diálogo de confirmación cuando el usuario presiona el botón
+  /// atrás del dispositivo. Si confirma, cierra la app explícitamente.
+  /// Bug #53: antes la app se cerraba sin advertencia.
+  Future<void> _confirmarSalida() async {
+    final salir = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.backgroundPrimary,
+        title: const Text(
+          '¿Salir de Kintsugi?',
+          style: TextStyle(color: Colors.white),
+        ),
+        content: const Text(
+          'Tu progreso ya está guardado. ¿Deseas cerrar la app?',
+          style: TextStyle(color: Colors.white70),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(false),
+            child: const Text('Cancelar'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text(
+              'Salir',
+              style: TextStyle(color: Colors.redAccent),
+            ),
+          ),
+        ],
+      ),
+    );
 
+    if (salir == true) {
+      SystemNavigator.pop();
+    }
+  }
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
+      onPopInvokedWithResult: (didPop, result) {
+        // Si el sistema ya hizo pop, no hacemos nada
+        if (didPop) return;
+        // Bug #53: confirmar antes de cerrar la app
+        _confirmarSalida();
+      },
       child: Scaffold(
         key: _scaffoldKey,
         backgroundColor: AppColors.backgroundPrimary,

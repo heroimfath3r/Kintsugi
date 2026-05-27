@@ -25,6 +25,7 @@ class AppColors {
   // Bordes
   static const Color borderDefault = Color(0xFF2A2A2A);
   static const Color borderActive = Color(0xFFC9A84C);
+  static const Color borderSubtle = Color(0xFF3A3A3A);
 
   // Estados emocionales
   static const Color emotionFrustracion = Color(0xFFEF5350);

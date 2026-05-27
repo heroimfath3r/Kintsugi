@@ -5,8 +5,6 @@ import 'package:kintsugi_app/application/auth/auth_bloc.dart';
 import 'package:kintsugi_app/application/auth/auth_event.dart';
 import 'package:kintsugi_app/application/auth/auth_state.dart';
 
-// ── Datos por arquetipo ────────────────────────────────────────────────────────
-
 class _ArquetipoData {
   final String id;
   final String nombre;
@@ -92,8 +90,6 @@ const Map<String, _ArquetipoData> _arquetipos = {
   ),
 };
 
-// ── Screen ─────────────────────────────────────────────────────────────────────
-
 class ResultadoArquetipoScreen extends StatefulWidget {
   final Map<String, int> puntos;
 
@@ -131,29 +127,18 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
   }
 
   _ArquetipoData get _data => _arquetipos[_arquetipoSeleccionado]!;
-
   bool get _hayEmpate => _empate.length > 1;
 
-  // ══════════════════════════════════════════════════════════════════════
-  // FIX PRINCIPAL: Guardar arquetipo en el backend vía AuthBloc
-  // ══════════════════════════════════════════════════════════════════════
   void _aceptarArquetipo() {
     setState(() => _guardando = true);
     context.read<AuthBloc>().add(AuthSetArchetype(arquetipoId: _arquetipoSeleccionado));
-    // El BlocListener se encarga de navegar cuando AuthAuthenticated llega
-    // con el arquetipo ya seteado.
   }
-
-  // ── Build ──────────────────────────────────────────────────────────────────
 
   @override
   Widget build(BuildContext context) {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated && state.user.tieneArquetipo) {
-          // Arquetipo guardado exitosamente en el backend.
-          // Volvemos al _AuthGate que ahora verá tieneArquetipo == true
-          // y mostrará el HomeScreen automáticamente.
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
         if (state is AuthError) {
@@ -164,40 +149,36 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
         }
       },
       child: PopScope(
-        // Bloquear botón atrás mientras se guarda
         canPop: !_guardando,
         child: Scaffold(
           backgroundColor: AppColors.backgroundPrimary,
           body: Stack(
             children: [
-              // Imagen de fondo full screen
               Positioned.fill(
                 child: Image.asset(
                   _data.imagenFase1,
                   fit: BoxFit.cover,
-                  errorBuilder: (context, error, stack) => const ColoredBox(
-                    color: Color(0xFF1A1A1A),
+                  errorBuilder: (context, error, stack) => ColoredBox(
+                    color: AppColors.backgroundSecondary, // Fix #50
                   ),
                 ),
               ),
-              // Gradiente
-              const Positioned.fill(
+              Positioned.fill(
                 child: DecoratedBox(
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      stops: [0.20, 0.45, 1.0],
+                      stops: const [0.20, 0.45, 1.0],
                       colors: [
                         Colors.transparent,
-                        Color(0xCC0D0D0D),
-                        Color(0xFF0D0D0D),
+                        AppColors.backgroundPrimary.withValues(alpha: 0.8), // Fix #50
+                        AppColors.backgroundPrimary, // Fix #50
                       ],
                     ),
                   ),
                 ),
               ),
-              // Contenido
               SafeArea(
                 child: Column(
                   children: [
@@ -232,8 +213,6 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
     );
   }
 
-  // ── Back button ────────────────────────────────────────────────────────────
-
   Widget _buildBackButton(BuildContext context) {
     return Align(
       alignment: Alignment.centerLeft,
@@ -250,14 +229,12 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
     );
   }
 
-  // ── Pill "Tu arquetipo" ────────────────────────────────────────────────────
-
   Widget _buildPill() {
     return Center(
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
         decoration: BoxDecoration(
-          color: const Color(0x33C9A84C),
+          color: AppColors.accentOverlay, // Fix #50
           borderRadius: BorderRadius.circular(100),
           border: Border.all(color: AppColors.accentPrimary),
         ),
@@ -274,8 +251,6 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
       ),
     );
   }
-
-  // ── Nombre + origen ────────────────────────────────────────────────────────
 
   Widget _buildNombre() {
     return Column(
@@ -306,16 +281,14 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
     );
   }
 
-  // ── Card descripción ───────────────────────────────────────────────────────
-
   Widget _buildCard() {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
-          color: const Color(0xE61A1A1A),
+          color: AppColors.backgroundSecondary.withValues(alpha: 0.9), // Fix #50
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF2A2A2A)),
+          border: Border.all(color: AppColors.borderDefault), // Fix #50
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -327,9 +300,9 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
               isItalic: false,
               textColor: AppColors.textPrimary,
             ),
-            const Padding(
-              padding: EdgeInsets.symmetric(vertical: 16),
-              child: Divider(color: Color(0xFF2A2A2A), height: 1),
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 16),
+              child: Divider(color: AppColors.borderDefault, height: 1), // Fix #50
             ),
             _buildSeccion(
               label: 'TU FILOSOFÍA',
@@ -378,8 +351,6 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
     );
   }
 
-  // ── Botón principal ────────────────────────────────────────────────────────
-
   Widget _buildBotonPrincipal(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
@@ -419,8 +390,6 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
     );
   }
 
-  // ── Ver otros arquetipos ───────────────────────────────────────────────────
-
   Widget _buildVerOtros(BuildContext context) {
     return GestureDetector(
       onTap: _guardando ? null : () => _mostrarSelectorArquetipos(context),
@@ -456,8 +425,6 @@ class _ResultadoArquetipoScreenState extends State<ResultadoArquetipoScreen> {
   }
 }
 
-// ── Bottom sheet selector ──────────────────────────────────────────────────────
-
 class _SelectorArquetiposSheet extends StatelessWidget {
   final String arquetipoActual;
   final List<String> empate;
@@ -474,23 +441,22 @@ class _SelectorArquetiposSheet extends StatelessWidget {
     final lista = empate.isNotEmpty ? empate : _arquetipos.keys.toList();
 
     return Container(
-      decoration: const BoxDecoration(
-        color: Color(0xFF1A1A1A),
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        border: Border(top: BorderSide(color: Color(0xFF2A2A2A))),
+      decoration: BoxDecoration(
+        color: AppColors.backgroundSecondary, // Fix #50
+        borderRadius: const BorderRadius.vertical(top: Radius.circular(24)),
+        border: Border(top: BorderSide(color: AppColors.borderDefault)), // Fix #50
       ),
       padding: const EdgeInsets.fromLTRB(24, 16, 24, 32),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
-          // Handle
           Center(
             child: Container(
               width: 40,
               height: 4,
               decoration: BoxDecoration(
-                color: const Color(0xFF3A3A3A),
+                color: AppColors.borderSubtle, // Fix #50
                 borderRadius: BorderRadius.circular(2),
               ),
             ),
@@ -519,13 +485,13 @@ class _SelectorArquetiposSheet extends StatelessWidget {
                   height: 60,
                   decoration: BoxDecoration(
                     color: isActual
-                        ? const Color(0x26C9A84C)
-                        : const Color(0xFF242424),
+                        ? AppColors.accentOverlay // Fix #50
+                        : AppColors.backgroundCard, // Fix #50
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(
                       color: isActual
                           ? AppColors.accentPrimary
-                          : const Color(0xFF3A3A3A),
+                          : AppColors.borderSubtle, // Fix #50
                       width: isActual ? 1.5 : 1,
                     ),
                   ),

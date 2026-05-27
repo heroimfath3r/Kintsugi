@@ -1,6 +1,3 @@
-// Reemplaza TODO el contenido de:
-// lib/presentation/screens/auth/auth_screen.dart
-
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -63,7 +60,7 @@ class _AuthScreenState extends State<AuthScreen> {
     final email = _emailController.text.trim();
     final pw = _passwordController.text;
     if (email.isEmpty || !_isValidEmail(email)) return false;
-    if (pw.isEmpty) return false;
+    if (pw.isEmpty || pw.length < 8) return false; // Fix #51: mínimo 8 caracteres en login
     if (_mode == AuthMode.register) {
       if (!_isValidPassword(pw)) return false;
       if (_confirmPasswordController.text != pw) return false;
@@ -84,9 +81,11 @@ class _AuthScreenState extends State<AuthScreen> {
 
       _passwordError = pw.isEmpty
           ? 'La contraseña es requerida'
-          : (_mode == AuthMode.register && !_isValidPassword(pw))
-              ? 'No cumple los requisitos'
-              : null;
+          : pw.length < 8
+              ? 'La contraseña debe tener al menos 8 caracteres' // Fix #51
+              : (_mode == AuthMode.register && !_isValidPassword(pw))
+                  ? 'No cumple los requisitos'
+                  : null;
 
       if (_mode == AuthMode.register) {
         _confirmPasswordError = confirm.isEmpty
@@ -128,7 +127,6 @@ class _AuthScreenState extends State<AuthScreen> {
     return BlocListener<AuthBloc, AuthState>(
       listener: (context, state) {
         if (state is AuthAuthenticated) {
-          // El _AuthGate en main.dart se encarga de navegar.
           Navigator.of(context).popUntil((route) => route.isFirst);
         }
         if (state is AuthError) {
@@ -314,7 +312,6 @@ class _AuthScreenState extends State<AuthScreen> {
         _emailField(),
         const SizedBox(height: 14),
         _passwordField(),
-        // ── NUEVO: Link "¿Olvidaste tu contraseña?" ──
         const SizedBox(height: 10),
         Align(
           alignment: Alignment.centerRight,

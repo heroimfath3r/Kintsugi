@@ -21,8 +21,6 @@ import 'package:kintsugi_app/presentation/screens/home/tabs/perfil_tab.dart';
 import 'package:kintsugi_app/core/network/connectivity_service.dart';
 import 'package:kintsugi_app/data/repositories/image_repository.dart';
 
-// ── Constantes ──────────────────────────────────────────────────────────
-
 const Map<String, String> _nombres = {
   'thorfinn': 'THORFINN',
   'rocklee': 'ROCK LEE',
@@ -42,25 +40,18 @@ const Map<String, String> _animes = {
 };
 
 const Map<String, String> _filosofias = {
-  'thorfinn':
-      'No necesitas una espada para tener valor. El verdadero guerrero busca la paz.',
-  'rocklee':
-      'El esfuerzo es el genio que nunca se rinde. Si no puedo hacer cien patadas, haré mil.',
-  'rock_lee':
-      'El esfuerzo es el genio que nunca se rinde. Si no puedo hacer cien patadas, haré mil.',
-  'ippo':
-      'El coraje no es la ausencia del miedo, es dar un paso a pesar de él.',
-  'mob':
-      'Sentir no es debilidad. Reprimir lo que sientes es lo que te rompe.',
-  'asta':
-      'No importa lo que digan. Si tú no te rindes, nadie puede detenerte.',
+  'thorfinn': 'No necesitas una espada para tener valor. El verdadero guerrero busca la paz.',
+  'rocklee': 'El esfuerzo es el genio que nunca se rinde. Si no puedo hacer cien patadas, haré mil.',
+  'rock_lee': 'El esfuerzo es el genio que nunca se rinde. Si no puedo hacer cien patadas, haré mil.',
+  'ippo': 'El coraje no es la ausencia del miedo, es dar un paso a pesar de él.',
+  'mob': 'Sentir no es debilidad. Reprimir lo que sientes es lo que te rompe.',
+  'asta': 'No importa lo que digan. Si tú no te rindes, nadie puede detenerte.',
 };
 
 class _OpcionEmocional {
   final String emoji;
   final String label;
   final String valor;
-
   const _OpcionEmocional(this.emoji, this.label, this.valor);
 }
 
@@ -72,11 +63,8 @@ const _emociones = [
   _OpcionEmocional('☁️', 'Calma', 'calma'),
 ];
 
-// ── HomeScreen (entry point con BlocProvider) ───────────────────────────
-
 class HomeScreen extends StatelessWidget {
   final String arquetipoId;
-
   const HomeScreen({super.key, required this.arquetipoId});
 
   @override
@@ -93,11 +81,8 @@ class HomeScreen extends StatelessWidget {
   }
 }
 
-// ── HomeView (stateful con tabs) ────────────────────────────────────────
-
 class _HomeView extends StatefulWidget {
   final String arquetipoId;
-
   const _HomeView({required this.arquetipoId});
 
   @override
@@ -109,80 +94,149 @@ class _HomeViewState extends State<_HomeView> {
   final GlobalKey<ScaffoldState> _scaffoldKey = GlobalKey<ScaffoldState>();
   late final ImageRepository _imageRepository;
 
+  // ── HU-12: Mensajes de reencuadre por arquetipo ───────────────────────
+  static const Map<String, String> _mensajesReencuadre = {
+    'thorfinn':
+        'No todo guerrero gana cada batalla. Lo importante es seguir caminando hacia la paz interior. Hoy es un nuevo día para retomar tu senda.',
+    'rocklee':
+        '¡El esfuerzo es lo que cuenta, no el resultado! Si ayer no se pudo, hoy es el día para entrenar más fuerte. ¡Adelante!',
+    'rock_lee':
+        '¡El esfuerzo es lo que cuenta, no el resultado! Si ayer no se pudo, hoy es el día para entrenar más fuerte. ¡Adelante!',
+    'ippo':
+        'Hasta el campeón cae a veces. Lo que define al boxeador es levantarse. Hoy retomamos el ring, contigo.',
+    'mob':
+        'Está bien no estar al 100% siempre. Tu valor no depende de lo que hagas hoy. Avancemos a tu ritmo.',
+    'asta':
+        '¡Aunque ayer no se haya podido, hoy sí! Nunca te rindas, ¡eso es lo que importa!',
+  };
+
   @override
   void initState() {
     super.initState();
     _imageRepository = sl<ImageRepository>();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _verificarMisionPospuesta();
+    });
   }
 
+  void _verificarMisionPospuesta() {
+    final state = context.read<HomeBloc>().state;
+    if (state is! HomeLoaded) return;
+    final mision = state.misionHoy;
+    if (mision == null || mision.completada) return;
 
-
-  String get _nombre =>
-      _nombres[widget.arquetipoId] ?? widget.arquetipoId.toUpperCase();
-
-  String get _anime => _animes[widget.arquetipoId] ?? '';
-
-  String get _filosofia => _filosofias[widget.arquetipoId] ?? '';
-
-  String get _imagenFase1 =>
-    _imageRepository.getAvatarUrl(widget.arquetipoId, 1);
-
-  String _imagenFase(int fase) =>
-    _imageRepository.getAvatarUrl(widget.arquetipoId, fase);
-
-  String _formatearFecha() {
-    final now = DateTime.now();
-    const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
-    const meses = [
-      'Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
-      'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'
-    ];
-    return '${dias[now.weekday - 1]}, ${now.day} ${meses[now.month - 1]}';
+    try {
+      final fechaMision = DateTime.parse(mision.fecha);
+      final horasTranscurridas = DateTime.now().difference(fechaMision).inHours;
+      if (horasTranscurridas >= 24) {
+        _mostrarDialogoReencuadre();
+      }
+    } catch (_) {}
   }
-  /// Muestra un diálogo de confirmación cuando el usuario presiona el botón
-  /// atrás del dispositivo. Si confirma, cierra la app explícitamente.
-  /// Bug #53: antes la app se cerraba sin advertencia.
-  Future<void> _confirmarSalida() async {
-    final salir = await showDialog<bool>(
+
+  void _mostrarDialogoReencuadre() {
+    final mensaje = _mensajesReencuadre[widget.arquetipoId] ??
+        'Hoy es un nuevo día para retomar tu camino. Sin presiones, a tu ritmo.';
+
+    showDialog(
       context: context,
+      barrierDismissible: false,
       builder: (ctx) => AlertDialog(
-        backgroundColor: AppColors.backgroundPrimary,
-        title: const Text(
-          '¿Salir de Kintsugi?',
-          style: TextStyle(color: Colors.white),
+        backgroundColor: AppColors.backgroundSecondary,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(color: AppColors.accentPrimary.withValues(alpha: 0.4)),
         ),
-        content: const Text(
-          'Tu progreso ya está guardado. ¿Deseas cerrar la app?',
-          style: TextStyle(color: Colors.white70),
+        title: Row(
+          children: [
+            const Text('✨', style: TextStyle(fontSize: 22)),
+            const SizedBox(width: 8),
+            const Text(
+              'Un nuevo día',
+              style: TextStyle(
+                fontFamily: 'Cinzel',
+                fontSize: 18,
+                fontWeight: FontWeight.w700,
+                color: AppColors.accentPrimary,
+              ),
+            ),
+          ],
+        ),
+        content: Text(
+          mensaje,
+          style: const TextStyle(
+            fontFamily: 'Inter',
+            fontSize: 14,
+            color: AppColors.textSecondary,
+            height: 1.6,
+          ),
         ),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(false),
-            child: const Text('Cancelar'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.of(ctx).pop(true),
-            child: const Text(
-              'Salir',
-              style: TextStyle(color: Colors.redAccent),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              onPressed: () => Navigator.of(ctx).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.accentPrimary,
+                foregroundColor: AppColors.backgroundPrimary,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              child: const Text(
+                'CONTINUAR',
+                style: TextStyle(
+                  fontFamily: 'Inter',
+                  fontSize: 14,
+                  fontWeight: FontWeight.w600,
+                  letterSpacing: 1,
+                ),
+              ),
             ),
           ),
         ],
       ),
     );
-
-    if (salir == true) {
-      SystemNavigator.pop();
-    }
   }
+
+  String get _nombre => _nombres[widget.arquetipoId] ?? widget.arquetipoId.toUpperCase();
+  String get _anime => _animes[widget.arquetipoId] ?? '';
+  String get _filosofia => _filosofias[widget.arquetipoId] ?? '';
+  String get _imagenFase1 => _imageRepository.getAvatarUrl(widget.arquetipoId, 1);
+  String _imagenFase(int fase) => _imageRepository.getAvatarUrl(widget.arquetipoId, fase);
+
+  String _formatearFecha() {
+    final now = DateTime.now();
+    const dias = ['Lun', 'Mar', 'Mié', 'Jue', 'Vie', 'Sáb', 'Dom'];
+    const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun', 'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+    return '${dias[now.weekday - 1]}, ${now.day} ${meses[now.month - 1]}';
+  }
+
+  Future<void> _confirmarSalida() async {
+    final salir = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        backgroundColor: AppColors.backgroundPrimary,
+        title: const Text('¿Salir de Kintsugi?', style: TextStyle(color: Colors.white)),
+        content: const Text('Tu progreso ya está guardado. ¿Deseas cerrar la app?', style: TextStyle(color: Colors.white70)),
+        actions: [
+          TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancelar')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx).pop(true),
+            child: const Text('Salir', style: TextStyle(color: Colors.redAccent)),
+          ),
+        ],
+      ),
+    );
+    if (salir == true) SystemNavigator.pop();
+  }
+
   @override
   Widget build(BuildContext context) {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) {
-        // Si el sistema ya hizo pop, no hacemos nada
         if (didPop) return;
-        // Bug #53: confirmar antes de cerrar la app
         _confirmarSalida();
       },
       child: Scaffold(
@@ -196,7 +250,6 @@ class _HomeViewState extends State<_HomeView> {
         ),
         body: Stack(
           children: [
-            // Fondo solo visible en tab Inicio
             if (_tabIndex == 0) _buildBackground(),
             SafeArea(
               bottom: false,
@@ -213,32 +266,15 @@ class _HomeViewState extends State<_HomeView> {
     );
   }
 
-  /// Decide qué tab mostrar según el índice seleccionado.
   Widget _buildCurrentTab() {
     switch (_tabIndex) {
-      case 0:
-        return _buildHomeContent();
-      case 1:
-        return MisionesTab(arquetipoId: widget.arquetipoId);
-      case 2:
-        return ProgresoTab(
-          arquetipoId: widget.arquetipoId,
-          imagenFase: _imagenFase,
-        );
-      case 3:
-        return PerfilTab(
-          arquetipoId: widget.arquetipoId,
-          nombre: _nombre,
-          anime: _anime,
-          filosofia: _filosofia,
-          imagenFase1: _imagenFase1,
-        );
-      default:
-        return _buildHomeContent();
+      case 0: return _buildHomeContent();
+      case 1: return MisionesTab(arquetipoId: widget.arquetipoId);
+      case 2: return ProgresoTab(arquetipoId: widget.arquetipoId, imagenFase: _imagenFase);
+      case 3: return PerfilTab(arquetipoId: widget.arquetipoId, nombre: _nombre, anime: _anime, filosofia: _filosofia, imagenFase1: _imagenFase1);
+      default: return _buildHomeContent();
     }
   }
-
-  // ── Background ────────────────────────────────────────────────────────
 
   Widget _buildBackground() {
     return Positioned.fill(
@@ -248,8 +284,7 @@ class _HomeViewState extends State<_HomeView> {
             child: Image.network(
               _imagenFase1,
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stack) =>
-                  const ColoredBox(color: Color(0xFF1A1A1A)),
+              errorBuilder: (context, error, stack) => const ColoredBox(color: Color(0xFF1A1A1A)),
             ),
           ),
           const Positioned.fill(
@@ -259,11 +294,7 @@ class _HomeViewState extends State<_HomeView> {
                   begin: Alignment.topCenter,
                   end: Alignment.bottomCenter,
                   stops: [0.35, 0.60, 1.0],
-                  colors: [
-                    Colors.transparent,
-                    Color(0xB30D0D0D),
-                    Color(0xF50D0D0D),
-                  ],
+                  colors: [Colors.transparent, Color(0xB30D0D0D), Color(0xF50D0D0D)],
                 ),
               ),
             ),
@@ -273,8 +304,6 @@ class _HomeViewState extends State<_HomeView> {
     );
   }
 
-  // ── Top Bar ───────────────────────────────────────────────────────────
-
   Widget _buildTopBar() {
     return SizedBox(
       height: 56,
@@ -283,25 +312,16 @@ class _HomeViewState extends State<_HomeView> {
         child: Row(
           children: [
             IconButton(
-              icon: const Icon(Icons.menu,
-                  color: AppColors.textPrimary, size: 22),
+              icon: const Icon(Icons.menu, color: AppColors.textPrimary, size: 22),
               onPressed: () => _scaffoldKey.currentState?.openDrawer(),
               padding: EdgeInsets.zero,
-              constraints:
-                  const BoxConstraints(minWidth: 36, minHeight: 36),
+              constraints: const BoxConstraints(minWidth: 36, minHeight: 36),
             ),
             const Expanded(
-              child: Text(
-                'KINTSUGI',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontFamily: 'Cinzel',
-                  fontSize: 18,
-                  fontWeight: FontWeight.w700,
-                  color: AppColors.accentPrimary,
-                  letterSpacing: 3,
-                ),
-              ),
+              child: Text('KINTSUGI', textAlign: TextAlign.center, style: TextStyle(
+                fontFamily: 'Cinzel', fontSize: 18, fontWeight: FontWeight.w700,
+                color: AppColors.accentPrimary, letterSpacing: 3,
+              )),
             ),
             GestureDetector(
               onTap: () => setState(() => _tabIndex = 3),
@@ -310,53 +330,28 @@ class _HomeViewState extends State<_HomeView> {
                   context: context,
                   builder: (ctx) => AlertDialog(
                     backgroundColor: const Color(0xFF1A1A1A),
-                    title: const Text(
-                      '¿Cerrar sesión?',
-                      style: TextStyle(
-                        fontFamily: 'Cinzel',
-                        color: AppColors.textPrimary,
-                        fontSize: 18,
-                      ),
-                    ),
+                    title: const Text('¿Cerrar sesión?', style: TextStyle(fontFamily: 'Cinzel', color: AppColors.textPrimary, fontSize: 18)),
                     actions: [
-                      TextButton(
-                        onPressed: () => Navigator.of(ctx).pop(),
-                        child: const Text(
-                          'Cancelar',
-                          style:
-                              TextStyle(color: AppColors.textSecondary),
-                        ),
-                      ),
+                      TextButton(onPressed: () => Navigator.of(ctx).pop(), child: const Text('Cancelar', style: TextStyle(color: AppColors.textSecondary))),
                       TextButton(
                         onPressed: () {
                           Navigator.of(ctx).pop();
-                          context
-                              .read<AuthBloc>()
-                              .add(const AuthLogoutRequested());
+                          context.read<AuthBloc>().add(const AuthLogoutRequested());
                         },
-                        child: const Text(
-                          'Cerrar sesión',
-                          style: TextStyle(color: AppColors.error),
-                        ),
+                        child: const Text('Cerrar sesión', style: TextStyle(color: AppColors.error)),
                       ),
                     ],
                   ),
                 );
               },
               child: Container(
-                width: 36,
-                height: 36,
+                width: 36, height: 36,
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: const Color(0xFF242424),
-                  border:
-                      Border.all(color: AppColors.accentPrimary, width: 1.5),
+                  border: Border.all(color: AppColors.accentPrimary, width: 1.5),
                 ),
-                child: const Icon(
-                  Icons.person,
-                  color: AppColors.textSecondary,
-                  size: 20,
-                ),
+                child: const Icon(Icons.person, color: AppColors.textSecondary, size: 20),
               ),
             ),
           ],
@@ -365,18 +360,12 @@ class _HomeViewState extends State<_HomeView> {
     );
   }
 
-  // ── Tab Inicio ────────────────────────────────────────────────────────
-
   Widget _buildHomeContent() {
     return BlocBuilder<HomeBloc, HomeState>(
       builder: (context, state) {
         if (state is HomeLoading || state is HomeInitial) {
-          return const Center(
-            child:
-                CircularProgressIndicator(color: AppColors.accentPrimary),
-          );
+          return const Center(child: CircularProgressIndicator(color: AppColors.accentPrimary));
         }
-
         if (state is HomeError) {
           return Center(
             child: Padding(
@@ -384,34 +373,17 @@ class _HomeViewState extends State<_HomeView> {
               child: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  const Icon(Icons.error_outline,
-                      color: AppColors.error, size: 48),
+                  const Icon(Icons.error_outline, color: AppColors.error, size: 48),
                   const SizedBox(height: 16),
-                  Text(
-                    state.message,
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                  Text(state.message, textAlign: TextAlign.center, style: const TextStyle(fontFamily: 'Inter', fontSize: 14, color: AppColors.textSecondary)),
                   const SizedBox(height: 24),
-                  ElevatedButton(
-                    onPressed: () =>
-                        context.read<HomeBloc>().add(const HomeLoadData()),
-                    child: const Text('REINTENTAR'),
-                  ),
+                  ElevatedButton(onPressed: () => context.read<HomeBloc>().add(const HomeLoadData()), child: const Text('REINTENTAR')),
                 ],
               ),
             ),
           );
         }
-
-        if (state is HomeLoaded) {
-          return _buildLoadedContent(context, state);
-        }
-
+        if (state is HomeLoaded) return _buildLoadedContent(context, state);
         return const SizedBox.shrink();
       },
     );
@@ -422,9 +394,7 @@ class _HomeViewState extends State<_HomeView> {
       builder: (context, constraints) {
         final screenHeight = MediaQuery.of(context).size.height;
         final statusBarHeight = MediaQuery.of(context).padding.top;
-        final greetingOffset =
-            (screenHeight * 0.38 - statusBarHeight - 56)
-                .clamp(8.0, double.infinity);
+        final greetingOffset = (screenHeight * 0.38 - statusBarHeight - 56).clamp(8.0, double.infinity);
 
         return SingleChildScrollView(
           physics: const ClampingScrollPhysics(),
@@ -437,15 +407,11 @@ class _HomeViewState extends State<_HomeView> {
               _buildCardRacha(state.user.racha),
               const SizedBox(height: 12),
               state.yaHizoCheckin
-                  ? _buildCheckinCompletado(
-                      state.checkinHoy!.emoji, state.checkinHoy!.label)
+                  ? _buildCheckinCompletado(state.checkinHoy!.emoji, state.checkinHoy!.label)
                   : _buildCardCheckin(context),
               const SizedBox(height: 12),
-              if (state.misionHoy != null)
-                _buildCardMision(
-                    context, state.misionHoy!, state.misionCompletada),
-              if (state.misionHoy == null && state.yaHizoCheckin)
-                _buildMisionCargando(),
+              if (state.misionHoy != null) _buildCardMision(context, state.misionHoy!, state.misionCompletada),
+              if (state.misionHoy == null && state.yaHizoCheckin) _buildMisionCargando(),
               const SizedBox(height: 24),
             ],
           ),
@@ -460,26 +426,9 @@ class _HomeViewState extends State<_HomeView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Bienvenido de nuevo,',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13,
-              fontWeight: FontWeight.w400,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          const Text('Bienvenido de nuevo,', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
           const SizedBox(height: 4),
-          Text(
-            '$_nombre te espera hoy',
-            style: const TextStyle(
-              fontFamily: 'Cinzel',
-              fontSize: 22,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-              height: 1.3,
-            ),
-          ),
+          Text('$_nombre te espera hoy', style: const TextStyle(fontFamily: 'Cinzel', fontSize: 22, fontWeight: FontWeight.w600, color: AppColors.textPrimary, height: 1.3)),
         ],
       ),
     );
@@ -490,11 +439,7 @@ class _HomeViewState extends State<_HomeView> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         height: 72,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: const Color(0xFF2A2A2A)),
-        ),
+        decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16), border: Border.all(color: const Color(0xFF2A2A2A))),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
@@ -505,25 +450,9 @@ class _HomeViewState extends State<_HomeView> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Racha activa',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      fontWeight: FontWeight.w400,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                  const Text('Racha activa', style: TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
                   const SizedBox(height: 2),
-                  Text(
-                    '$racha ${racha == 1 ? 'día' : 'días'} consecutivos',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 16,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
+                  Text('$racha ${racha == 1 ? 'día' : 'días'} consecutivos', style: const TextStyle(fontFamily: 'Inter', fontSize: 16, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                 ],
               ),
             ),
@@ -537,11 +466,7 @@ class _HomeViewState extends State<_HomeView> {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF2A2A2A)),
-        ),
+        decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF2A2A2A))),
         padding: const EdgeInsets.all(20),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -549,52 +474,20 @@ class _HomeViewState extends State<_HomeView> {
             Row(
               children: [
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0x33C9A84C),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(color: AppColors.accentPrimary),
-                  ),
-                  child: const Text(
-                    'HOY',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.accentPrimary,
-                      letterSpacing: 0.8,
-                    ),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: const Color(0x33C9A84C), borderRadius: BorderRadius.circular(100), border: Border.all(color: AppColors.accentPrimary)),
+                  child: const Text('HOY', style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.accentPrimary, letterSpacing: 0.8)),
                 ),
                 const Spacer(),
-                Text(
-                  _formatearFecha(),
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 12,
-                    fontWeight: FontWeight.w400,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
+                Text(_formatearFecha(), style: const TextStyle(fontFamily: 'Inter', fontSize: 12, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
               ],
             ),
             const SizedBox(height: 16),
-            const Text(
-              '¿Cómo estás hoy?',
-              style: TextStyle(
-                fontFamily: 'Cinzel',
-                fontSize: 18,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
+            const Text('¿Cómo estás hoy?', style: TextStyle(fontFamily: 'Cinzel', fontSize: 18, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             const SizedBox(height: 16),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: _emociones
-                  .map((e) => _buildOpcionEmocional(context, e))
-                  .toList(),
+              children: _emociones.map((e) => _buildOpcionEmocional(context, e)).toList(),
             ),
           ],
         ),
@@ -604,35 +497,16 @@ class _HomeViewState extends State<_HomeView> {
 
   Widget _buildOpcionEmocional(BuildContext context, _OpcionEmocional opcion) {
     return GestureDetector(
-      onTap: () {
-        context.read<HomeBloc>().add(
-              HomeCheckinRequested(estadoEmocional: opcion.valor),
-            );
-      },
+      onTap: () => context.read<HomeBloc>().add(HomeCheckinRequested(estadoEmocional: opcion.valor)),
       child: Column(
         children: [
           Container(
-            width: 52,
-            height: 52,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: const Color(0xFF242424),
-              border: Border.all(color: const Color(0xFF3A3A3A)),
-            ),
-            child: Center(
-              child: Text(opcion.emoji, style: const TextStyle(fontSize: 22)),
-            ),
+            width: 52, height: 52,
+            decoration: BoxDecoration(shape: BoxShape.circle, color: const Color(0xFF242424), border: Border.all(color: const Color(0xFF3A3A3A))),
+            child: Center(child: Text(opcion.emoji, style: const TextStyle(fontSize: 22))),
           ),
           const SizedBox(height: 6),
-          Text(
-            opcion.label,
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 10,
-              fontWeight: FontWeight.w400,
-              color: AppColors.textSecondary,
-            ),
-          ),
+          Text(opcion.label, style: const TextStyle(fontFamily: 'Inter', fontSize: 10, fontWeight: FontWeight.w400, color: AppColors.textSecondary)),
         ],
       ),
     );
@@ -643,12 +517,7 @@ class _HomeViewState extends State<_HomeView> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         height: 72,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-              color: AppColors.accentPrimary.withValues(alpha: 0.3)),
-        ),
+        decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(16), border: Border.all(color: AppColors.accentPrimary.withValues(alpha: 0.3))),
         padding: const EdgeInsets.symmetric(horizontal: 16),
         child: Row(
           children: [
@@ -659,48 +528,27 @@ class _HomeViewState extends State<_HomeView> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Check-in de hoy',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                  const Text('Check-in de hoy', style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.textSecondary)),
                   const SizedBox(height: 2),
-                  Text(
-                    'Te sientes: $label',
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 15,
-                      fontWeight: FontWeight.w600,
-                      color: AppColors.textPrimary,
-                    ),
-                  ),
+                  Text('Te sientes: $label', style: const TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
                 ],
               ),
             ),
-            const Icon(Icons.check_circle,
-                color: AppColors.success, size: 24),
+            const Icon(Icons.check_circle, color: AppColors.success, size: 24),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildCardMision(
-      BuildContext context, MisionModel mision, bool completada) {
+  Widget _buildCardMision(BuildContext context, MisionModel mision, bool completada) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         decoration: BoxDecoration(
           color: const Color(0xFF1A1A1A),
           borderRadius: BorderRadius.circular(20),
-          border: Border.all(
-            color: completada
-                ? AppColors.success.withValues(alpha: 0.3)
-                : const Color(0xFF2A2A2A),
-          ),
+          border: Border.all(color: completada ? AppColors.success.withValues(alpha: 0.3) : const Color(0xFF2A2A2A)),
         ),
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -708,91 +556,28 @@ class _HomeViewState extends State<_HomeView> {
           children: [
             Row(
               children: [
-                const Text(
-                  'MISIÓN DE HOY',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11,
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.accentPrimary,
-                    letterSpacing: 1.2,
-                  ),
-                ),
+                const Text('MISIÓN DE HOY', style: TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w600, color: AppColors.accentPrimary, letterSpacing: 1.2)),
                 const SizedBox(width: 10),
                 Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                  decoration: BoxDecoration(
-                    color: const Color(0x335C6BC0),
-                    borderRadius: BorderRadius.circular(100),
-                    border: Border.all(color: const Color(0xFF5C6BC0)),
-                  ),
-                  child: Text(
-                    mision.tipoLabel,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 11,
-                      fontWeight: FontWeight.w400,
-                      color: Color(0xFF9FA8DA),
-                    ),
-                  ),
+                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                  decoration: BoxDecoration(color: const Color(0x335C6BC0), borderRadius: BorderRadius.circular(100), border: Border.all(color: const Color(0xFF5C6BC0))),
+                  child: Text(mision.tipoLabel, style: const TextStyle(fontFamily: 'Inter', fontSize: 11, fontWeight: FontWeight.w400, color: Color(0xFF9FA8DA))),
                 ),
-                if (completada) ...[
-                  const Spacer(),
-                  const Icon(Icons.check_circle,
-                      color: AppColors.success, size: 20),
-                ],
+                if (completada) ...[const Spacer(), const Icon(Icons.check_circle, color: AppColors.success, size: 20)],
               ],
             ),
             const SizedBox(height: 14),
-            Text(
-              mision.titulo,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 15,
-                fontWeight: FontWeight.w600,
-                color: AppColors.textPrimary,
-              ),
-            ),
+            Text(mision.titulo, style: const TextStyle(fontFamily: 'Inter', fontSize: 15, fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
             const SizedBox(height: 8),
-            Text(
-              mision.descripcion,
-              maxLines: 3,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontFamily: 'Inter',
-                fontSize: 13,
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-            ),
+            Text(mision.descripcion, maxLines: 3, overflow: TextOverflow.ellipsis, style: const TextStyle(fontFamily: 'Inter', fontSize: 13, color: AppColors.textSecondary, height: 1.5)),
             if (!completada) ...[
               const SizedBox(height: 16),
               SizedBox(
-                width: double.infinity,
-                height: 44,
+                width: double.infinity, height: 44,
                 child: ElevatedButton(
-                  onPressed: () {
-                    context.read<HomeBloc>().add(
-                          HomeMisionCompleted(misionId: mision.id),
-                        );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentPrimary,
-                    foregroundColor: AppColors.backgroundPrimary,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  child: const Text(
-                    'MARCAR COMPLETADA',
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 13,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 1,
-                    ),
-                  ),
+                  onPressed: () => context.read<HomeBloc>().add(HomeMisionCompleted(misionId: mision.id)),
+                  style: ElevatedButton.styleFrom(backgroundColor: AppColors.accentPrimary, foregroundColor: AppColors.backgroundPrimary, shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
+                  child: const Text('MARCAR COMPLETADA', style: TextStyle(fontFamily: 'Inter', fontSize: 13, fontWeight: FontWeight.w600, letterSpacing: 1)),
                 ),
               ),
             ],
@@ -807,23 +592,9 @@ class _HomeViewState extends State<_HomeView> {
       padding: const EdgeInsets.symmetric(horizontal: 16),
       child: Container(
         height: 80,
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A1A1A),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF2A2A2A)),
-        ),
-        child: const Center(
-          child: Text(
-            'Cargando tu misión...',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 13,
-              color: AppColors.textSecondary,
-            ),
-          ),
-        ),
+        decoration: BoxDecoration(color: const Color(0xFF1A1A1A), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFF2A2A2A))),
+        child: const Center(child: Text('Cargando tu misión...', style: TextStyle(fontFamily: 'Inter', fontSize: 13, color: AppColors.textSecondary))),
       ),
     );
   }
-
 }

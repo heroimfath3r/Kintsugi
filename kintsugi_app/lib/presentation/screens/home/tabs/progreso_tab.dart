@@ -14,6 +14,14 @@ const Map<String, String> _emojisPorEstado = {
   'calma': '☁️',
 };
 
+const Map<String, String> _nombresPorEstado = {
+  'vacio': 'Vacío',
+  'frustracion': 'Frustración',
+  'motivacion': 'Motivación',
+  'ansiedad': 'Ansiedad',
+  'calma': 'Calma',
+};
+
 class ProgresoTab extends StatefulWidget {
   final String arquetipoId;
   final String Function(int fase) imagenFase;
@@ -94,16 +102,12 @@ class _ProgresoTabState extends State<ProgresoTab> {
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              const Icon(Icons.error_outline,
-                  color: AppColors.error, size: 48),
+              const Icon(Icons.error_outline, color: AppColors.error, size: 48),
               const SizedBox(height: 16),
               Text(_error!, style: const TextStyle(
                 fontFamily: 'Inter', fontSize: 14, color: AppColors.textSecondary)),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _cargarDatos,
-                child: const Text('REINTENTAR'),
-              ),
+              ElevatedButton(onPressed: _cargarDatos, child: const Text('REINTENTAR')),
             ],
           ),
         ),
@@ -115,7 +119,7 @@ class _ProgresoTabState extends State<ProgresoTab> {
     return RefreshIndicator(
       onRefresh: _cargarDatos,
       color: AppColors.accentPrimary,
-      backgroundColor: const Color(0xFF1A1A1A),
+      backgroundColor: AppColors.backgroundSecondary,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(16, 16, 16, 96),
@@ -127,8 +131,12 @@ class _ProgresoTabState extends State<ProgresoTab> {
             const SizedBox(height: 16),
             _buildEstadisticas(progreso),
             const SizedBox(height: 16),
-            if (_resumenSemanal != null)
+            if (_resumenSemanal != null) ...[
               _buildResumenSemanal(_resumenSemanal!),
+              const SizedBox(height: 16),
+              // HU-13: Línea de tiempo
+              _buildLineaDeTiempo(_resumenSemanal!),
+            ],
           ],
         ),
       ),
@@ -140,33 +148,23 @@ class _ProgresoTabState extends State<ProgresoTab> {
   Widget _buildAvatarCard(ProgresoModel progreso) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: AppColors.backgroundSecondary,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: AppColors.accentPrimary.withValues(alpha: 0.3),
-        ),
+        border: Border.all(color: AppColors.accentPrimary.withValues(alpha: 0.3)),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
         children: [
-          const Text(
-            'Tu avatar',
-            style: TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12,
-              color: AppColors.textSecondary,
-              letterSpacing: 1,
-            ),
-          ),
+          const Text('Tu avatar', style: TextStyle(
+            fontFamily: 'Inter', fontSize: 12,
+            color: AppColors.textSecondary, letterSpacing: 1,
+          )),
           const SizedBox(height: 12),
-          // Avatar circular
           Container(
-            width: 120,
-            height: 120,
+            width: 120, height: 120,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                  color: AppColors.accentPrimary, width: 3),
+              border: Border.all(color: AppColors.accentPrimary, width: 3),
             ),
             child: ClipOval(
               child: Image.network(
@@ -180,27 +178,17 @@ class _ProgresoTabState extends State<ProgresoTab> {
             ),
           ),
           const SizedBox(height: 12),
-          // Badge de fase
           Container(
-            padding:
-                const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 6),
             decoration: BoxDecoration(
               color: AppColors.accentPrimary.withValues(alpha: 0.15),
               borderRadius: BorderRadius.circular(100),
-              border: Border.all(
-                color: AppColors.accentPrimary.withValues(alpha: 0.5),
-              ),
+              border: Border.all(color: AppColors.accentPrimary.withValues(alpha: 0.5)),
             ),
-            child: Text(
-              progreso.faseLabel,
-              style: const TextStyle(
-                fontFamily: 'Cinzel',
-                fontSize: 14,
-                fontWeight: FontWeight.w700,
-                color: AppColors.accentPrimary,
-                letterSpacing: 2,
-              ),
-            ),
+            child: Text(progreso.faseLabel, style: const TextStyle(
+              fontFamily: 'Cinzel', fontSize: 14, fontWeight: FontWeight.w700,
+              color: AppColors.accentPrimary, letterSpacing: 2,
+            )),
           ),
         ],
       ),
@@ -212,9 +200,9 @@ class _ProgresoTabState extends State<ProgresoTab> {
   Widget _buildXpCard(ProgresoModel progreso) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: AppColors.backgroundSecondary,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFF2A2A2A)),
+        border: Border.all(color: AppColors.borderDefault),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
@@ -223,36 +211,25 @@ class _ProgresoTabState extends State<ProgresoTab> {
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
-                'Experiencia',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w600,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              Text(
-                '${progreso.xp} / ${progreso.xpSiguienteFase} XP',
+              const Text('Experiencia', style: TextStyle(
+                fontFamily: 'Inter', fontSize: 14,
+                fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+              )),
+              Text('${progreso.xp} / ${progreso.xpSiguienteFase} XP',
                 style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.accentPrimary,
-                ),
-              ),
+                  fontFamily: 'Inter', fontSize: 13,
+                  fontWeight: FontWeight.w500, color: AppColors.accentPrimary,
+                )),
             ],
           ),
           const SizedBox(height: 12),
-          // Barra de progreso
           ClipRRect(
             borderRadius: BorderRadius.circular(6),
             child: LinearProgressIndicator(
               value: progreso.progresoPorcentaje,
               minHeight: 10,
-              backgroundColor: const Color(0xFF2A2A2A),
-              valueColor: const AlwaysStoppedAnimation<Color>(
-                  AppColors.accentPrimary),
+              backgroundColor: AppColors.borderDefault,
+              valueColor: const AlwaysStoppedAnimation<Color>(AppColors.accentPrimary),
             ),
           ),
           const SizedBox(height: 8),
@@ -260,11 +237,7 @@ class _ProgresoTabState extends State<ProgresoTab> {
             progreso.fase < 3
                 ? '${progreso.xpSiguienteFase - progreso.xp} XP para la siguiente fase'
                 : '¡Has alcanzado la fase máxima!',
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 12,
-              color: AppColors.textSecondary,
-            ),
+            style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.textSecondary),
           ),
         ],
       ),
@@ -276,20 +249,11 @@ class _ProgresoTabState extends State<ProgresoTab> {
   Widget _buildEstadisticas(ProgresoModel progreso) {
     return Row(
       children: [
-        Expanded(
-          child: _buildStatCard(
-              '🔥', '${progreso.racha}', 'Racha\nactual'),
-        ),
+        Expanded(child: _buildStatCard('🔥', '${progreso.racha}', 'Racha\nactual')),
         const SizedBox(width: 10),
-        Expanded(
-          child: _buildStatCard(
-              '✅', '${progreso.misionesCompletadas}', 'Misiones\ncompletadas'),
-        ),
+        Expanded(child: _buildStatCard('✅', '${progreso.misionesCompletadas}', 'Misiones\ncompletadas')),
         const SizedBox(width: 10),
-        Expanded(
-          child: _buildStatCard(
-              '⭐', '${progreso.xp}', 'XP\ntotal'),
-        ),
+        Expanded(child: _buildStatCard('⭐', '${progreso.xp}', 'XP\ntotal')),
       ],
     );
   }
@@ -297,35 +261,24 @@ class _ProgresoTabState extends State<ProgresoTab> {
   Widget _buildStatCard(String emoji, String valor, String label) {
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: AppColors.backgroundSecondary,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFF2A2A2A)),
+        border: Border.all(color: AppColors.borderDefault),
       ),
       padding: const EdgeInsets.symmetric(vertical: 16),
       child: Column(
         children: [
           Text(emoji, style: const TextStyle(fontSize: 24)),
           const SizedBox(height: 6),
-          Text(
-            valor,
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 22,
-              fontWeight: FontWeight.w700,
-              color: AppColors.textPrimary,
-            ),
-          ),
+          Text(valor, style: const TextStyle(
+            fontFamily: 'Inter', fontSize: 22,
+            fontWeight: FontWeight.w700, color: AppColors.textPrimary,
+          )),
           const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontFamily: 'Inter',
-              fontSize: 11,
-              color: AppColors.textSecondary,
-              height: 1.3,
-            ),
-          ),
+          Text(label, textAlign: TextAlign.center, style: const TextStyle(
+            fontFamily: 'Inter', fontSize: 11,
+            color: AppColors.textSecondary, height: 1.3,
+          )),
         ],
       ),
     );
@@ -334,68 +287,42 @@ class _ProgresoTabState extends State<ProgresoTab> {
   // ── Resumen semanal ──────────────────────────────────────────────────
 
   Widget _buildResumenSemanal(ProgresoWeeklyModel resumen) {
+    final estadoEmoji = _emojisPorEstado[resumen.estadoMasFrecuente] ?? '—';
+    final estadoNombre = _nombresPorEstado[resumen.estadoMasFrecuente] ?? resumen.estadoMasFrecuente;
+
     return Container(
       decoration: BoxDecoration(
-        color: const Color(0xFF1A1A1A),
+        color: AppColors.backgroundSecondary,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFF2A2A2A)),
+        border: Border.all(color: AppColors.borderDefault),
       ),
       padding: const EdgeInsets.all(20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Tu semana',
-            style: TextStyle(
-              fontFamily: 'Cinzel',
-              fontSize: 16,
-              fontWeight: FontWeight.w600,
-              color: AppColors.textPrimary,
-            ),
-          ),
+          const Text('Tu semana', style: TextStyle(
+            fontFamily: 'Cinzel', fontSize: 16,
+            fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+          )),
           const SizedBox(height: 16),
-          // Fila de 7 días
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: List.generate(7, (index) {
-              final dia = index < resumen.dias.length
-                  ? resumen.dias[index]
-                  : null;
+              final dia = index < resumen.dias.length ? resumen.dias[index] : null;
               return _buildDiaCircle(index, dia);
             }),
           ),
           const SizedBox(height: 20),
-          // Stats del resumen
           Row(
             children: [
-              Expanded(
-                child: _buildResumenStat(
-                  'Días activos',
-                  '${resumen.diasActivos}/7',
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 32,
-                color: const Color(0xFF2A2A2A),
-              ),
-              Expanded(
-                child: _buildResumenStat(
-                  'Misiones hechas',
-                  '${resumen.misionesCompletadas}',
-                ),
-              ),
-              Container(
-                width: 1,
-                height: 32,
-                color: const Color(0xFF2A2A2A),
-              ),
-              Expanded(
-                child: _buildResumenStat(
-                  'Estado frecuente',
-                  _emojisPorEstado[resumen.estadoMasFrecuente] ?? '—',
-                ),
-              ),
+              Expanded(child: _buildResumenStat('Días activos', '${resumen.diasActivos}/7')),
+              Container(width: 1, height: 32, color: AppColors.borderDefault),
+              Expanded(child: _buildResumenStat('Misiones', '${resumen.misionesCompletadas}')),
+              Container(width: 1, height: 32, color: AppColors.borderDefault),
+              Expanded(child: _buildResumenStat(
+                'Estado frecuente',
+                resumen.estadoMasFrecuente.isNotEmpty ? '$estadoEmoji $estadoNombre' : '—',
+              )),
             ],
           ),
         ],
@@ -407,53 +334,38 @@ class _ProgresoTabState extends State<ProgresoTab> {
     const diasSemana = ['L', 'M', 'X', 'J', 'V', 'S', 'D'];
     final label = diasSemana[index];
     final tieneCheckin = dia?.estadoEmocional != null;
-    final emoji = tieneCheckin
-        ? (_emojisPorEstado[dia!.estadoEmocional] ?? '❓')
-        : null;
+    final emoji = tieneCheckin ? (_emojisPorEstado[dia!.estadoEmocional] ?? '❓') : null;
 
     return Column(
       children: [
         Container(
-          width: 40,
-          height: 40,
+          width: 40, height: 40,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: tieneCheckin
                 ? AppColors.accentPrimary.withValues(alpha: 0.15)
-                : const Color(0xFF242424),
+                : AppColors.backgroundCard,
             border: Border.all(
               color: tieneCheckin
                   ? AppColors.accentPrimary.withValues(alpha: 0.5)
-                  : const Color(0xFF3A3A3A),
+                  : AppColors.borderSubtle,
             ),
           ),
           child: Center(
-            child: Text(
-              emoji ?? '·',
-              style: TextStyle(fontSize: tieneCheckin ? 18 : 14),
-            ),
+            child: Text(emoji ?? '·', style: TextStyle(fontSize: tieneCheckin ? 18 : 14)),
           ),
         ),
         const SizedBox(height: 4),
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 11,
-            fontWeight: FontWeight.w400,
-            color: AppColors.textSecondary,
-          ),
-        ),
-        // Indicador de misión completada
+        Text(label, style: const TextStyle(
+          fontFamily: 'Inter', fontSize: 11,
+          fontWeight: FontWeight.w400, color: AppColors.textSecondary,
+        )),
         const SizedBox(height: 2),
         Container(
-          width: 6,
-          height: 6,
+          width: 6, height: 6,
           decoration: BoxDecoration(
             shape: BoxShape.circle,
-            color: dia?.misionCompletada == true
-                ? AppColors.success
-                : Colors.transparent,
+            color: dia?.misionCompletada == true ? AppColors.success : Colors.transparent,
           ),
         ),
       ],
@@ -463,26 +375,187 @@ class _ProgresoTabState extends State<ProgresoTab> {
   Widget _buildResumenStat(String label, String valor) {
     return Column(
       children: [
-        Text(
-          valor,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        Text(valor, style: const TextStyle(
+          fontFamily: 'Inter', fontSize: 14,
+          fontWeight: FontWeight.w700, color: AppColors.textPrimary,
+        )),
         const SizedBox(height: 2),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 11,
-            color: AppColors.textSecondary,
-          ),
-        ),
+        Text(label, textAlign: TextAlign.center, style: const TextStyle(
+          fontFamily: 'Inter', fontSize: 11, color: AppColors.textSecondary,
+        )),
       ],
+    );
+  }
+
+  // ── HU-13: Línea de tiempo ───────────────────────────────────────────
+
+  Widget _buildLineaDeTiempo(ProgresoWeeklyModel resumen) {
+    // Filtrar solo días que tienen datos
+    final diasConDatos = resumen.dias
+        .where((d) => d.estadoEmocional != null)
+        .toList()
+        .reversed
+        .toList();
+
+    return Container(
+      decoration: BoxDecoration(
+        color: AppColors.backgroundSecondary,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppColors.borderDefault),
+      ),
+      padding: const EdgeInsets.all(20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Text('Historial', style: TextStyle(
+                fontFamily: 'Cinzel', fontSize: 16,
+                fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+              )),
+              const Spacer(),
+              Text(
+                '${diasConDatos.length} día${diasConDatos.length != 1 ? 's' : ''}',
+                style: const TextStyle(
+                  fontFamily: 'Inter', fontSize: 12, color: AppColors.textSecondary,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          if (diasConDatos.isEmpty)
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 24),
+              child: const Center(
+                child: Text(
+                  'Aún no hay registros esta semana.\nCompleta tu primer check-in para ver tu historial.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontFamily: 'Inter', fontSize: 13,
+                    color: AppColors.textSecondary, height: 1.5,
+                  ),
+                ),
+              ),
+            )
+          else
+            ...diasConDatos.asMap().entries.map((entry) {
+              final i = entry.key;
+              final dia = entry.value;
+              final esUltimo = i == diasConDatos.length - 1;
+              return _buildEntradaTimeline(dia, esUltimo);
+            }),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEntradaTimeline(CheckinDiaModel dia, bool esUltimo) {
+    final emoji = _emojisPorEstado[dia.estadoEmocional] ?? '❓';
+    final nombreEstado = _nombresPorEstado[dia.estadoEmocional] ?? dia.estadoEmocional ?? '';
+
+    // Formatear fecha
+    String fechaFormateada = dia.fecha;
+    try {
+      final partes = dia.fecha.split('-');
+      if (partes.length == 3) {
+        const meses = ['Ene', 'Feb', 'Mar', 'Abr', 'May', 'Jun',
+                       'Jul', 'Ago', 'Sep', 'Oct', 'Nov', 'Dic'];
+        final mes = int.parse(partes[1]) - 1;
+        fechaFormateada = '${partes[2]} ${meses[mes]}';
+      }
+    } catch (_) {}
+
+    return IntrinsicHeight(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Línea de tiempo
+          SizedBox(
+            width: 40,
+            child: Column(
+              children: [
+                Container(
+                  width: 36, height: 36,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: AppColors.accentPrimary.withValues(alpha: 0.15),
+                    border: Border.all(color: AppColors.accentPrimary.withValues(alpha: 0.5)),
+                  ),
+                  child: Center(child: Text(emoji, style: const TextStyle(fontSize: 16))),
+                ),
+                if (!esUltimo)
+                  Expanded(
+                    child: Container(
+                      width: 2,
+                      color: AppColors.borderDefault,
+                      margin: const EdgeInsets.symmetric(vertical: 4),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          // Contenido
+          Expanded(
+            child: Padding(
+              padding: EdgeInsets.only(bottom: esUltimo ? 0 : 16),
+              child: Container(
+                decoration: BoxDecoration(
+                  color: AppColors.backgroundCard,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(color: AppColors.borderDefault),
+                ),
+                padding: const EdgeInsets.all(12),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(fechaFormateada, style: const TextStyle(
+                            fontFamily: 'Inter', fontSize: 11,
+                            color: AppColors.textSecondary,
+                          )),
+                          const SizedBox(height: 4),
+                          Text(nombreEstado, style: const TextStyle(
+                            fontFamily: 'Inter', fontSize: 14,
+                            fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+                          )),
+                        ],
+                      ),
+                    ),
+                    if (dia.misionCompletada)
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.success.withValues(alpha: 0.15),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: AppColors.success.withValues(alpha: 0.3)),
+                        ),
+                        child: const Text('✅ Misión', style: TextStyle(
+                          fontFamily: 'Inter', fontSize: 11,
+                          color: AppColors.success, fontWeight: FontWeight.w500,
+                        )),
+                      )
+                    else
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: AppColors.borderDefault,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Text('Sin misión', style: TextStyle(
+                          fontFamily: 'Inter', fontSize: 11,
+                          color: AppColors.textSecondary,
+                        )),
+                      ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -229,7 +229,7 @@ class _HomeViewState extends State<_HomeView> {
       case 0: return _buildHomeContent();
       case 1: return MisionesTab(arquetipoId: widget.arquetipoId);
       case 2: return ProgresoTab(arquetipoId: widget.arquetipoId, imagenFase: _imagenFase);
-      case 3: return PerfilTab(arquetipoId: widget.arquetipoId, nombre: _nombre, anime: _anime, filosofia: _filosofia, imagenFase1: _imagenFase1);
+      case 3: return PerfilTab(arquetipoId: widget.arquetipoId, nombre: _nombre, anime: _anime, filosofia: _filosofia, imagenFase: _imagenFase);
       default: return _buildHomeContent();
     }
   }

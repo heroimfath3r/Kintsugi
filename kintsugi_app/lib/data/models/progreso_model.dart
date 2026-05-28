@@ -1,4 +1,3 @@
-// Reemplaza TODO el contenido de:
 // lib/data/models/progreso_model.dart
 
 class ProgresoModel {
@@ -8,12 +7,30 @@ class ProgresoModel {
   final int misionesCompletadas;
   final int xpSiguienteFase;
 
+  // HU-14: lista legada de nombres de hitos (se mantiene por compatibilidad).
+  final List<String> hitosDesbloqueados;
+
+  // HU-14: catálogo de hitos con estado, calculado por el backend.
+  // La UI solo pinta esto; no decide qué está desbloqueado.
+  final List<HitoModel> hitos;
+
+  // Aliases del checklist HU-14
+  int get puntosAcumulados => xp;
+  int get faseVisualActual => fase;
+  int get rachaActual => racha;
+
+  // Conteo derivado de hitos efectivamente desbloqueados.
+  int get totalHitosDesbloqueados =>
+      hitos.where((h) => h.desbloqueado).length;
+
   const ProgresoModel({
     this.xp = 0,
     this.fase = 1,
     this.racha = 0,
     this.misionesCompletadas = 0,
     this.xpSiguienteFase = 100,
+    this.hitosDesbloqueados = const [],
+    this.hitos = const [],
   });
 
   factory ProgresoModel.fromJson(Map<String, dynamic> json) {
@@ -21,12 +38,39 @@ class ProgresoModel {
     if (json['siguienteFase'] is Map) {
       xpNext = json['siguienteFase']['xpNecesario'] ?? 100;
     }
+
+    // Compatibilidad: lista legada de nombres (si el backend aún la manda).
+    final hitosRaw = json['hitosDesbloqueados'];
+    final List<String> hitosLegado = [];
+    if (hitosRaw is List) {
+      for (final h in hitosRaw) {
+        if (h is String) {
+          hitosLegado.add(h);
+        } else if (h is Map) {
+          hitosLegado.add(h['nombre']?.toString() ?? h['id']?.toString() ?? '');
+        }
+      }
+    }
+
+    // HU-14: catálogo de hitos con estado (nuevo formato del backend).
+    final hitosCatalogoRaw = json['hitos'];
+    final List<HitoModel> hitosCatalogo = [];
+    if (hitosCatalogoRaw is List) {
+      for (final h in hitosCatalogoRaw) {
+        if (h is Map<String, dynamic>) {
+          hitosCatalogo.add(HitoModel.fromJson(h));
+        }
+      }
+    }
+
     return ProgresoModel(
       xp: _parseInt(json['xp']),
       fase: _parseInt(json['fase'], defaultValue: 1),
       racha: _parseInt(json['racha']),
       misionesCompletadas: _parseInt(json['misionesCompletadas']),
       xpSiguienteFase: xpNext,
+      hitosDesbloqueados: hitosLegado,
+      hitos: hitosCatalogo,
     );
   }
 
@@ -43,12 +87,60 @@ class ProgresoModel {
   }
 
   String get faseLabel => 'Fase $fase';
+
+  ProgresoModel copyWith({
+    int? xp,
+    int? fase,
+    int? racha,
+    int? misionesCompletadas,
+    int? xpSiguienteFase,
+    List<String>? hitosDesbloqueados,
+    List<HitoModel>? hitos,
+  }) {
+    return ProgresoModel(
+      xp: xp ?? this.xp,
+      fase: fase ?? this.fase,
+      racha: racha ?? this.racha,
+      misionesCompletadas: misionesCompletadas ?? this.misionesCompletadas,
+      xpSiguienteFase: xpSiguienteFase ?? this.xpSiguienteFase,
+      hitosDesbloqueados: hitosDesbloqueados ?? this.hitosDesbloqueados,
+      hitos: hitos ?? this.hitos,
+    );
+  }
 }
 
-/// Modelo del resumen semanal.
-/// La API devuelve checkins y misiones como listas separadas.
-/// Este modelo las combina en una lista de 7 días (Lun-Dom)
-/// para que la UI pueda renderizar los círculos fácilmente.
+/// HU-14: representa un hito del catálogo con su estado para el usuario.
+/// Los datos vienen del backend (Firestore catalogo_hitos + cálculo de estado).
+/// La UI solo pinta; no decide qué está desbloqueado.
+class HitoModel {
+  final String id;
+  final String nombre;
+  final String emoji;
+  final int misionesRequeridas;
+  final String imagenUrl;
+  final bool desbloqueado;
+
+  const HitoModel({
+    required this.id,
+    required this.nombre,
+    required this.emoji,
+    required this.misionesRequeridas,
+    required this.imagenUrl,
+    required this.desbloqueado,
+  });
+
+  factory HitoModel.fromJson(Map<String, dynamic> json) {
+    return HitoModel(
+      id: json['id']?.toString() ?? '',
+      nombre: json['nombre']?.toString() ?? '',
+      emoji: json['emoji']?.toString() ?? '🏅',
+      misionesRequeridas: ProgresoModel._parseInt(json['misionesRequeridas']),
+      imagenUrl: json['imagenUrl']?.toString() ?? '',
+      desbloqueado: json['desbloqueado'] == true,
+    );
+  }
+}
+
 class ProgresoWeeklyModel {
   final String estadoMasFrecuente;
   final int misionesCompletadas;
@@ -63,11 +155,9 @@ class ProgresoWeeklyModel {
   });
 
   factory ProgresoWeeklyModel.fromJson(Map<String, dynamic> json) {
-    // La API devuelve: { checkins: [...], misiones: [...], estadoFrecuente, ... }
     final checkins = (json['checkins'] as List?) ?? [];
     final misiones = (json['misiones'] as List?) ?? [];
 
-    // Construir mapa de misiones completadas por fecha (YYYY-MM-DD)
     final misionesMap = <String, bool>{};
     for (final m in misiones) {
       if (m is Map<String, dynamic>) {
@@ -76,7 +166,6 @@ class ProgresoWeeklyModel {
       }
     }
 
-    // Construir mapa de check-ins por fecha (YYYY-MM-DD)
     final checkinsMap = <String, String>{};
     for (final c in checkins) {
       if (c is Map<String, dynamic>) {
@@ -85,9 +174,7 @@ class ProgresoWeeklyModel {
       }
     }
 
-    // Generar los 7 días de la semana actual (Lun a Dom)
     final now = DateTime.now();
-    // weekday: 1=Lun, 7=Dom
     final lunes = now.subtract(Duration(days: now.weekday - 1));
     final dias = List.generate(7, (i) {
       final dia = lunes.add(Duration(days: i));
@@ -99,7 +186,6 @@ class ProgresoWeeklyModel {
       );
     });
 
-    // Contar días activos (días con check-in)
     final diasActivos = dias.where((d) => d.estadoEmocional != null).length;
 
     return ProgresoWeeklyModel(
@@ -110,15 +196,11 @@ class ProgresoWeeklyModel {
     );
   }
 
-  /// Extrae YYYY-MM-DD de un string ISO datetime.
   static String _extraerFecha(String isoString) {
-    if (isoString.length >= 10) {
-      return isoString.substring(0, 10);
-    }
+    if (isoString.length >= 10) return isoString.substring(0, 10);
     return isoString;
   }
 
-  /// Formatea un DateTime como YYYY-MM-DD.
   static String _formatFecha(DateTime fecha) {
     final y = fecha.year.toString().padLeft(4, '0');
     final m = fecha.month.toString().padLeft(2, '0');

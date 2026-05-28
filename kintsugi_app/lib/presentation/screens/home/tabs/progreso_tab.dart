@@ -6,6 +6,9 @@ import 'package:kintsugi_app/core/di/service_locator.dart';
 import 'package:kintsugi_app/data/models/progreso_model.dart';
 import 'package:kintsugi_app/data/services/progreso_service.dart';
 
+// DEUDA TÉCNICA (documentada, no bloquea entrega):
+// Estos dos Maps deberían venir de la API/modelo (CheckinModel ya tiene
+// emoji y label). Se dejan aquí por ahora para no tocar más superficie.
 const Map<String, String> _emojisPorEstado = {
   'vacio': '🌑',
   'frustracion': '🔥',
@@ -37,6 +40,8 @@ class ProgresoTab extends StatefulWidget {
 }
 
 class _ProgresoTabState extends State<ProgresoTab> {
+  // DEUDA TÉCNICA: acceso directo al servicio desde la vista (bypass del BLoC).
+  // Pendiente migrar a un ProgresoBloc. No bloquea la entrega.
   final ProgresoService _progresoService = sl<ProgresoService>();
 
   bool _isLoading = true;
@@ -130,6 +135,8 @@ class _ProgresoTabState extends State<ProgresoTab> {
             _buildXpCard(progreso),
             const SizedBox(height: 16),
             _buildEstadisticas(progreso),
+            // HU-14: colección visual de hitos desbloqueados
+            _buildHitosDesbloqueados(progreso),
             const SizedBox(height: 16),
             if (_resumenSemanal != null) ...[
               _buildResumenSemanal(_resumenSemanal!),
@@ -284,6 +291,125 @@ class _ProgresoTabState extends State<ProgresoTab> {
     );
   }
 
+  // ── HU-14: colección visual de hitos ─────────────────────────────────
+
+  Widget _buildHitosDesbloqueados(ProgresoModel progreso) {
+    // Si el backend no devolvió hitos, no mostramos la sección.
+    if (progreso.hitos.isEmpty) return const SizedBox.shrink();
+
+    final desbloqueados = progreso.totalHitosDesbloqueados;
+    final total = progreso.hitos.length;
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 16),
+      child: Container(
+        decoration: BoxDecoration(
+          color: AppColors.backgroundSecondary,
+          borderRadius: BorderRadius.circular(20),
+          border: Border.all(color: AppColors.borderDefault),
+        ),
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Text('Hitos', style: TextStyle(
+                  fontFamily: 'Cinzel', fontSize: 16,
+                  fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+                )),
+                const Spacer(),
+                Text('$desbloqueados / $total', style: const TextStyle(
+                  fontFamily: 'Inter', fontSize: 12, color: AppColors.textSecondary,
+                )),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Wrap(
+              spacing: 12,
+              runSpacing: 12,
+              children: progreso.hitos
+                  .map((hito) => _buildHitoChip(hito))
+                  .toList(),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHitoChip(HitoModel hito) {
+    final desbloqueado = hito.desbloqueado;
+
+    final colorBorde = desbloqueado
+        ? AppColors.accentPrimary.withValues(alpha: 0.5)
+        : AppColors.borderSubtle;
+    final colorFondo = desbloqueado
+        ? AppColors.accentPrimary.withValues(alpha: 0.12)
+        : AppColors.backgroundCard;
+
+    return Opacity(
+      opacity: desbloqueado ? 1.0 : 0.45,
+      child: Container(
+        width: 88,
+        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+        decoration: BoxDecoration(
+          color: colorFondo,
+          borderRadius: BorderRadius.circular(14),
+          border: Border.all(color: colorBorde),
+        ),
+        child: Column(
+          children: [
+            SizedBox(
+              width: 48,
+              height: 48,
+              child: _buildHitoVisual(hito),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              hito.nombre,
+              textAlign: TextAlign.center,
+              maxLines: 2,
+              overflow: TextOverflow.ellipsis,
+              style: const TextStyle(
+                fontFamily: 'Inter', fontSize: 11,
+                fontWeight: FontWeight.w600, color: AppColors.textPrimary,
+                height: 1.2,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Icon(
+              desbloqueado ? Icons.check_circle : Icons.lock_outline,
+              size: 14,
+              color: desbloqueado ? AppColors.success : AppColors.textSecondary,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildHitoVisual(HitoModel hito) {
+    // Sin URL → emoji directo (fallback).
+    if (hito.imagenUrl.isEmpty) {
+      return Center(child: Text(hito.emoji, style: const TextStyle(fontSize: 32)));
+    }
+
+    // Con URL → intenta cargar; si falla o carga, cae al emoji.
+    return ClipOval(
+      child: Image.network(
+        hito.imagenUrl,
+        fit: BoxFit.cover,
+        loadingBuilder: (context, child, progress) =>
+            progress == null
+                ? child
+                : Center(child: Text(hito.emoji, style: const TextStyle(fontSize: 32))),
+        errorBuilder: (context, error, stackTrace) =>
+            Center(child: Text(hito.emoji, style: const TextStyle(fontSize: 32))),
+      ),
+    );
+  }
+
   // ── Resumen semanal ──────────────────────────────────────────────────
 
   Widget _buildResumenSemanal(ProgresoWeeklyModel resumen) {
@@ -390,7 +516,6 @@ class _ProgresoTabState extends State<ProgresoTab> {
   // ── HU-13: Línea de tiempo ───────────────────────────────────────────
 
   Widget _buildLineaDeTiempo(ProgresoWeeklyModel resumen) {
-    // Filtrar solo días que tienen datos
     final diasConDatos = resumen.dias
         .where((d) => d.estadoEmocional != null)
         .toList()
@@ -453,7 +578,6 @@ class _ProgresoTabState extends State<ProgresoTab> {
     final emoji = _emojisPorEstado[dia.estadoEmocional] ?? '❓';
     final nombreEstado = _nombresPorEstado[dia.estadoEmocional] ?? dia.estadoEmocional ?? '';
 
-    // Formatear fecha
     String fechaFormateada = dia.fecha;
     try {
       final partes = dia.fecha.split('-');
@@ -469,7 +593,6 @@ class _ProgresoTabState extends State<ProgresoTab> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Línea de tiempo
           SizedBox(
             width: 40,
             child: Column(
@@ -495,7 +618,6 @@ class _ProgresoTabState extends State<ProgresoTab> {
             ),
           ),
           const SizedBox(width: 12),
-          // Contenido
           Expanded(
             child: Padding(
               padding: EdgeInsets.only(bottom: esUltimo ? 0 : 16),

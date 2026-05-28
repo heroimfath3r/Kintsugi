@@ -1,4 +1,3 @@
-// Reemplaza TODO el contenido de:
 // lib/presentation/screens/home/tabs/perfil_tab.dart
 
 import 'package:flutter/material.dart';
@@ -16,7 +15,8 @@ class PerfilTab extends StatefulWidget {
   final String nombre;
   final String anime;
   final String filosofia;
-  final String imagenFase1;
+  // HU-14: función dinámica en vez de string fijo de fase 1
+  final String Function(int fase) imagenFase;
 
   const PerfilTab({
     super.key,
@@ -24,7 +24,7 @@ class PerfilTab extends StatefulWidget {
     required this.nombre,
     required this.anime,
     required this.filosofia,
-    required this.imagenFase1,
+    required this.imagenFase,
   });
 
   @override
@@ -42,8 +42,7 @@ class _PerfilTabState extends State<PerfilTab> {
   @override
   void initState() {
     super.initState();
-    _displayName =
-        FirebaseAuth.instance.currentUser?.displayName ?? '';
+    _displayName = FirebaseAuth.instance.currentUser?.displayName ?? '';
     _cargarPerfil();
   }
 
@@ -109,9 +108,8 @@ class _PerfilTabState extends State<PerfilTab> {
         actions: [
           TextButton(
             onPressed: () {
-                      Navigator.of(ctx).pop();
-                      context.read<AuthBloc>().add(const AuthLogoutRequested());
-                    },
+              Navigator.of(ctx).pop();
+            },
             child: const Text(
               'Cancelar',
               style: TextStyle(color: AppColors.textSecondary),
@@ -126,21 +124,18 @@ class _PerfilTabState extends State<PerfilTab> {
               try {
                 await FirebaseAuth.instance.currentUser
                     ?.updateDisplayName(nuevoNombre);
-                // Reload para que el cambio se refleje
                 await FirebaseAuth.instance.currentUser?.reload();
                 if (mounted) {
                   setState(() => _displayName = nuevoNombre);
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text('Nombre actualizado')),
+                    const SnackBar(content: Text('Nombre actualizado')),
                   );
                 }
               } catch (e) {
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                        content:
-                            Text('Error al actualizar el nombre')),
+                        content: Text('Error al actualizar el nombre')),
                   );
                 }
               }
@@ -180,8 +175,7 @@ class _PerfilTabState extends State<PerfilTab> {
                   width: 56,
                   height: 56,
                   decoration: BoxDecoration(
-                    color:
-                        AppColors.accentPrimary.withValues(alpha: 0.1),
+                    color: AppColors.accentPrimary.withValues(alpha: 0.1),
                     shape: BoxShape.circle,
                   ),
                   child: const Icon(
@@ -225,7 +219,7 @@ class _PerfilTabState extends State<PerfilTab> {
                       ),
                     ),
                     child: const Text(
-                      'INICIAR SESIÓN CON NUEVA CONTRASEÑA',
+                      'ENTENDIDO',
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 14,
@@ -284,9 +278,7 @@ class _PerfilTabState extends State<PerfilTab> {
           TextButton(
             onPressed: () {
               Navigator.of(ctx).pop();
-              context
-                  .read<AuthBloc>()
-                  .add(const AuthLogoutRequested());
+              context.read<AuthBloc>().add(const AuthLogoutRequested());
             },
             child: const Text(
               'Cerrar sesión',
@@ -304,8 +296,7 @@ class _PerfilTabState extends State<PerfilTab> {
   Widget build(BuildContext context) {
     if (_isLoading) {
       return const Center(
-        child:
-            CircularProgressIndicator(color: AppColors.accentPrimary),
+        child: CircularProgressIndicator(color: AppColors.accentPrimary),
       );
     }
 
@@ -362,6 +353,9 @@ class _PerfilTabState extends State<PerfilTab> {
   // ── Header del perfil ─────────────────────────────────────────────────
 
   Widget _buildPerfilHeader(UserModel user) {
+    // HU-14: usa la fase real del usuario, no siempre fase 1
+    final imagenActual = widget.imagenFase(user.fase);
+
     return Container(
       decoration: BoxDecoration(
         color: const Color(0xFF1A1A1A),
@@ -373,27 +367,52 @@ class _PerfilTabState extends State<PerfilTab> {
       padding: const EdgeInsets.all(24),
       child: Column(
         children: [
-          // Avatar
+          // Avatar con fase dinámica
           Container(
             width: 100,
             height: 100,
             decoration: BoxDecoration(
               shape: BoxShape.circle,
-              border: Border.all(
-                  color: AppColors.accentPrimary, width: 3),
+              border: Border.all(color: AppColors.accentPrimary, width: 3),
             ),
             child: ClipOval(
               child: Image.network(
-                widget.imagenFase1,
+                imagenActual,
                 fit: BoxFit.cover,
                 loadingBuilder: (context, child, progress) =>
-                    progress == null ? child : const CircularProgressIndicator(color: AppColors.accentPrimary),
-                errorBuilder: (context, error, stackTrace) =>
-                    const Icon(Icons.broken_image, color: AppColors.textSecondary, size: 48),
+                    progress == null
+                        ? child
+                        : const CircularProgressIndicator(
+                            color: AppColors.accentPrimary),
+                errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.broken_image,
+                    color: AppColors.textSecondary,
+                    size: 48),
               ),
             ),
           ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 8),
+          // Badge de fase actual — HU-14
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+            decoration: BoxDecoration(
+              color: AppColors.accentPrimary.withValues(alpha: 0.15),
+              borderRadius: BorderRadius.circular(100),
+              border: Border.all(
+                  color: AppColors.accentPrimary.withValues(alpha: 0.5)),
+            ),
+            child: Text(
+              'Fase ${user.fase}',
+              style: const TextStyle(
+                fontFamily: 'Cinzel',
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+                color: AppColors.accentPrimary,
+                letterSpacing: 1.5,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
           // Nombre del arquetipo
           Text(
             widget.nombre,
@@ -422,8 +441,7 @@ class _PerfilTabState extends State<PerfilTab> {
             decoration: BoxDecoration(
               border: Border(
                 left: BorderSide(
-                  color:
-                      AppColors.accentPrimary.withValues(alpha: 0.5),
+                  color: AppColors.accentPrimary.withValues(alpha: 0.5),
                   width: 3,
                 ),
               ),
@@ -479,7 +497,6 @@ class _PerfilTabState extends State<PerfilTab> {
             ),
           ),
           const SizedBox(height: 16),
-          // Nombre editable
           _buildInfoRowEditable(
             icon: Icons.person_outline,
             label: 'Nombre',
@@ -492,8 +509,8 @@ class _PerfilTabState extends State<PerfilTab> {
           _buildInfoRow(Icons.calendar_today_outlined,
               'Miembro desde', fechaRegistro),
           const SizedBox(height: 12),
-          _buildInfoRow(Icons.shield_outlined, 'Arquetipo',
-              user.nombreArquetipo),
+          _buildInfoRow(
+              Icons.shield_outlined, 'Arquetipo', user.nombreArquetipo),
         ],
       ),
     );
@@ -508,24 +525,20 @@ class _PerfilTabState extends State<PerfilTab> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                label,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 11,
-                  color: AppColors.textSecondary,
-                ),
-              ),
+              Text(label,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 11,
+                    color: AppColors.textSecondary,
+                  )),
               const SizedBox(height: 1),
-              Text(
-                value,
-                style: const TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 14,
-                  fontWeight: FontWeight.w500,
-                  color: AppColors.textPrimary,
-                ),
-              ),
+              Text(value,
+                  style: const TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: AppColors.textPrimary,
+                  )),
             ],
           ),
         ),
@@ -549,26 +562,22 @@ class _PerfilTabState extends State<PerfilTab> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  label,
-                  style: const TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 11,
-                    color: AppColors.textSecondary,
-                  ),
-                ),
+                Text(label,
+                    style: const TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 11,
+                      color: AppColors.textSecondary,
+                    )),
                 const SizedBox(height: 1),
-                Text(
-                  value,
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: value == 'Sin nombre'
-                        ? AppColors.textSecondary
-                        : AppColors.textPrimary,
-                  ),
-                ),
+                Text(value,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: value == 'Sin nombre'
+                          ? AppColors.textSecondary
+                          : AppColors.textPrimary,
+                    )),
               ],
             ),
           ),
@@ -604,17 +613,12 @@ class _PerfilTabState extends State<PerfilTab> {
           const SizedBox(height: 16),
           Row(
             children: [
-              Expanded(
-                  child:
-                      _buildStat('🔥', '${user.racha}', 'Racha')),
-              Expanded(
-                  child: _buildStat('⭐', '${user.xp}', 'XP')),
-              Expanded(
-                  child: _buildStat('✅',
-                      '${user.misionesCompletadas}', 'Misiones')),
+              Expanded(child: _buildStat('🔥', '${user.racha}', 'Racha')),
+              Expanded(child: _buildStat('⭐', '${user.xp}', 'XP')),
               Expanded(
                   child: _buildStat(
-                      '🏆', 'Fase ${user.fase}', 'Nivel')),
+                      '✅', '${user.misionesCompletadas}', 'Misiones')),
+              Expanded(child: _buildStat('🏆', 'Fase ${user.fase}', 'Nivel')),
             ],
           ),
         ],
@@ -627,24 +631,20 @@ class _PerfilTabState extends State<PerfilTab> {
       children: [
         Text(emoji, style: const TextStyle(fontSize: 20)),
         const SizedBox(height: 4),
-        Text(
-          valor,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 16,
-            fontWeight: FontWeight.w700,
-            color: AppColors.textPrimary,
-          ),
-        ),
+        Text(valor,
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              color: AppColors.textPrimary,
+            )),
         const SizedBox(height: 2),
-        Text(
-          label,
-          style: const TextStyle(
-            fontFamily: 'Inter',
-            fontSize: 11,
-            color: AppColors.textSecondary,
-          ),
-        ),
+        Text(label,
+            style: const TextStyle(
+              fontFamily: 'Inter',
+              fontSize: 11,
+              color: AppColors.textSecondary,
+            )),
       ],
     );
   }
@@ -680,8 +680,7 @@ class _PerfilTabState extends State<PerfilTab> {
     required VoidCallback onTap,
     bool isDestructive = false,
   }) {
-    final color =
-        isDestructive ? AppColors.error : AppColors.textPrimary;
+    final color = isDestructive ? AppColors.error : AppColors.textPrimary;
     return GestureDetector(
       onTap: onTap,
       child: Container(
@@ -690,8 +689,7 @@ class _PerfilTabState extends State<PerfilTab> {
           borderRadius: BorderRadius.circular(14),
           border: Border.all(color: const Color(0xFF2A2A2A)),
         ),
-        padding:
-            const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         child: Row(
           children: [
             Icon(icon, color: color, size: 22),
@@ -700,24 +698,20 @@ class _PerfilTabState extends State<PerfilTab> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Text(
-                    label,
-                    style: TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 14,
-                      fontWeight: FontWeight.w500,
-                      color: color,
-                    ),
-                  ),
+                  Text(label,
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: color,
+                      )),
                   const SizedBox(height: 2),
-                  Text(
-                    subtitle,
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 12,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
+                  Text(subtitle,
+                      style: const TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 12,
+                        color: AppColors.textSecondary,
+                      )),
                 ],
               ),
             ),

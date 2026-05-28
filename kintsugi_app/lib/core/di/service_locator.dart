@@ -1,3 +1,4 @@
+//C:\Proyectos\Kintsugi\kintsugi_app\lib\core\di\service_locator.dart
 import 'package:get_it/get_it.dart';
 import '../network/api_client.dart';
 import '../network/connectivity_service.dart';

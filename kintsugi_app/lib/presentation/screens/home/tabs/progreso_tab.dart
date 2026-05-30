@@ -202,8 +202,7 @@ class _ProgresoTabState extends State<ProgresoTab> {
     );
   }
 
-  // ── Barra de XP ──────────────────────────────────────────────────────
-
+// -- Barra de XP --------------------------------------------------
   Widget _buildXpCard(ProgresoModel progreso) {
     return Container(
       decoration: BoxDecoration(
@@ -222,11 +221,16 @@ class _ProgresoTabState extends State<ProgresoTab> {
                 fontFamily: 'Inter', fontSize: 14,
                 fontWeight: FontWeight.w600, color: AppColors.textPrimary,
               )),
-              Text('${progreso.xp} / ${progreso.xpSiguienteFase} XP',
+              // Modelo A: muestra XP DENTRO de la fase actual, no XP total.
+              Text(
+                progreso.esFaseMaxima
+                    ? '${progreso.xp} XP'
+                    : '${progreso.xpEnFaseActual} / ${progreso.xpRangoFase ?? 0} XP',
                 style: const TextStyle(
                   fontFamily: 'Inter', fontSize: 13,
                   fontWeight: FontWeight.w500, color: AppColors.accentPrimary,
-                )),
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -241,9 +245,9 @@ class _ProgresoTabState extends State<ProgresoTab> {
           ),
           const SizedBox(height: 8),
           Text(
-            progreso.fase < 3
-                ? '${progreso.xpSiguienteFase - progreso.xp} XP para la siguiente fase'
-                : '¡Has alcanzado la fase máxima!',
+            progreso.esFaseMaxima
+                ? '¡Has alcanzado la fase máxima!'
+                : '${progreso.xpParaSiguienteFase ?? 0} XP para la siguiente fase',
             style: const TextStyle(fontFamily: 'Inter', fontSize: 12, color: AppColors.textSecondary),
           ),
         ],

@@ -10,9 +10,16 @@ class ProgresoModel {
   // HU-14: lista legada de nombres de hitos (se mantiene por compatibilidad).
   final List<String> hitosDesbloqueados;
 
-  // HU-14: catálogo de hitos con estado, calculado por el backend.
-  // La UI solo pinta esto; no decide qué está desbloqueado.
+  // HU-14: catalogo de hitos con estado, calculado por el backend.
+  // La UI solo pinta esto; no decide que esta desbloqueado.
   final List<HitoModel> hitos;
+
+  // Modelo A (XP acumulativo): campos calculados por el backend.
+  // El frontend solo pinta; no calcula umbrales.
+  final int xpEnFaseActual;
+  final int? xpRangoFase;
+  final int? xpParaSiguienteFase;
+  final bool esFaseMaxima;
 
   // Aliases del checklist HU-14
   int get puntosAcumulados => xp;
@@ -31,6 +38,10 @@ class ProgresoModel {
     this.xpSiguienteFase = 100,
     this.hitosDesbloqueados = const [],
     this.hitos = const [],
+    this.xpEnFaseActual = 0,
+    this.xpRangoFase,
+    this.xpParaSiguienteFase,
+    this.esFaseMaxima = false,
   });
 
   factory ProgresoModel.fromJson(Map<String, dynamic> json) {
@@ -39,7 +50,7 @@ class ProgresoModel {
       xpNext = json['siguienteFase']['xpNecesario'] ?? 100;
     }
 
-    // Compatibilidad: lista legada de nombres (si el backend aún la manda).
+    // Compatibilidad: lista legada de nombres (si el backend aun la manda).
     final hitosRaw = json['hitosDesbloqueados'];
     final List<String> hitosLegado = [];
     if (hitosRaw is List) {
@@ -52,7 +63,7 @@ class ProgresoModel {
       }
     }
 
-    // HU-14: catálogo de hitos con estado (nuevo formato del backend).
+    // HU-14: catalogo de hitos con estado (nuevo formato del backend).
     final hitosCatalogoRaw = json['hitos'];
     final List<HitoModel> hitosCatalogo = [];
     if (hitosCatalogoRaw is List) {
@@ -71,6 +82,11 @@ class ProgresoModel {
       xpSiguienteFase: xpNext,
       hitosDesbloqueados: hitosLegado,
       hitos: hitosCatalogo,
+      // Modelo A: campos calculados por backend (con fallback defensivo).
+      xpEnFaseActual: _parseInt(json['xpEnFaseActual']),
+      xpRangoFase: _parseNullableInt(json['xpRangoFase']),
+      xpParaSiguienteFase: _parseNullableInt(json['xpParaSiguienteFase']),
+      esFaseMaxima: json['esFaseMaxima'] == true,
     );
   }
 
@@ -81,7 +97,22 @@ class ProgresoModel {
     return defaultValue;
   }
 
+  static int? _parseNullableInt(dynamic value) {
+    if (value == null) return null;
+    if (value is int) return value;
+    if (value is double) return value.toInt();
+    if (value is String) return int.tryParse(value);
+    return null;
+  }
+
+  // Progreso de la barra dentro de la fase actual (Modelo A).
+  // Si el backend no manda los campos nuevos, hace fallback al calculo viejo.
   double get progresoPorcentaje {
+    if (esFaseMaxima) return 1.0;
+    if (xpRangoFase != null && xpRangoFase! > 0) {
+      return (xpEnFaseActual / xpRangoFase!).clamp(0.0, 1.0);
+    }
+    // Fallback al comportamiento legacy.
     if (xpSiguienteFase <= 0) return 1.0;
     return (xp / xpSiguienteFase).clamp(0.0, 1.0);
   }
@@ -96,6 +127,10 @@ class ProgresoModel {
     int? xpSiguienteFase,
     List<String>? hitosDesbloqueados,
     List<HitoModel>? hitos,
+    int? xpEnFaseActual,
+    int? xpRangoFase,
+    int? xpParaSiguienteFase,
+    bool? esFaseMaxima,
   }) {
     return ProgresoModel(
       xp: xp ?? this.xp,
@@ -105,13 +140,17 @@ class ProgresoModel {
       xpSiguienteFase: xpSiguienteFase ?? this.xpSiguienteFase,
       hitosDesbloqueados: hitosDesbloqueados ?? this.hitosDesbloqueados,
       hitos: hitos ?? this.hitos,
+      xpEnFaseActual: xpEnFaseActual ?? this.xpEnFaseActual,
+      xpRangoFase: xpRangoFase ?? this.xpRangoFase,
+      xpParaSiguienteFase: xpParaSiguienteFase ?? this.xpParaSiguienteFase,
+      esFaseMaxima: esFaseMaxima ?? this.esFaseMaxima,
     );
   }
 }
 
-/// HU-14: representa un hito del catálogo con su estado para el usuario.
-/// Los datos vienen del backend (Firestore catalogo_hitos + cálculo de estado).
-/// La UI solo pinta; no decide qué está desbloqueado.
+/// HU-14: representa un hito del catalogo con su estado para el usuario.
+/// Los datos vienen del backend (Firestore catalogo_hitos + calculo de estado).
+/// La UI solo pinta; no decide que esta desbloqueado.
 class HitoModel {
   final String id;
   final String nombre;
